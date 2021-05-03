@@ -14,7 +14,13 @@ slice1 = trimesh.intersections.slice_mesh_plane(mesh, plane_normal=[0,0,1], plan
 slice2 = trimesh.intersections.slice_mesh_plane(mesh, plane_normal=[1,0, 0], plane_origin=[5,0,10], cap=True, cached_dots=None)
 
 # unione dei due pezzi
-union = trimesh.boolean.union([slice1, slice2],'scad')
+union = trimesh.boolean.union([slice1, slice2], 'scad')
 
 union.show()
 
+# controllo intersezione del piano
+# intersection = trimesh.intersections.mesh_plane(mesh, plane_normal=[0,0,1], plane_origin=[10,0,10], return_faces=False, cached_dots=None)
+intersection = slice = mesh.section(plane_normal=[0,0,1], plane_origin=[10,0,30])
+
+# l'oggetto == None se non trova un'intersezione
+intersection.show()
