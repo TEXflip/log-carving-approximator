@@ -7,6 +7,7 @@ mesh.invert() # inverte le normali
 
 print(mesh.volume)
 
+# --------- generazione taglio con 2 piani ------------
 # taglio con piano orizzontale
 slice1 = trimesh.intersections.slice_mesh_plane(mesh, plane_normal=[0,0,1], plane_origin=[10,0,10], cap=True, cached_dots=None)
 
@@ -18,9 +19,24 @@ union = trimesh.boolean.union([slice1, slice2], 'scad')
 
 union.show()
 
-# controllo intersezione del piano
+#---------- controllo intersezione con un piano -----------
+
 # intersection = trimesh.intersections.mesh_plane(mesh, plane_normal=[0,0,1], plane_origin=[10,0,10], return_faces=False, cached_dots=None)
 intersection = slice = mesh.section(plane_normal=[0,0,1], plane_origin=[10,0,30])
 
-# l'oggetto == None se non trova un'intersezione
+# l'oggetto == NoneType se non trova un'intersezione
 intersection.show()
+
+# ----------- controllo intersezione di due piani con la mesh --------
+
+# taglio con piano orizzontale
+slice1 = trimesh.intersections.slice_mesh_plane(mesh, plane_normal=[0,0,-1], plane_origin=[10,0,10], cap=True, cached_dots=None)
+
+# taglio con piano verticale
+slice2 = trimesh.intersections.slice_mesh_plane(mesh, plane_normal=[-1,0, 0], plane_origin=[5,0,10], cap=True, cached_dots=None)
+
+# intersezione dei due pezzi
+difference = trimesh.boolean.intersection([slice2, slice1], 'scad')
+
+# l'oggetto == NoneType se non trova un'intersezione (idem per slice1 e slice2)
+difference.show()
