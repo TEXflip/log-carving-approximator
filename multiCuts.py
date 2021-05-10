@@ -78,6 +78,7 @@ def testMultipleCuts():
 #     print('Cubo is not watertight')
 #     trimesh.repair.fill_holes(cubo)
 
+#
 
 cuboTagliato = cubo
 
