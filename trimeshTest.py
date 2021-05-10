@@ -1,11 +1,12 @@
 import numpy as np
 import trimesh
 
+# mesh = trimesh.load('3D models/test_cube_website2.STL', force='mesh')
 mesh = trimesh.load('3D models/bulbasaur.STL', force='mesh')
 
 mesh.invert() # inverte le normali
 
-print(mesh.volume)
+print('Difference volume: ' + str(mesh.volume))
 
 # --------- generazione taglio con 2 piani ------------
 # taglio con piano orizzontale
@@ -40,3 +41,8 @@ difference = trimesh.boolean.intersection([slice2, slice1], 'scad')
 
 # l'oggetto == NoneType se non trova un'intersezione (idem per slice1 e slice2)
 difference.show()
+
+
+
+# print('Intersection volume: ' + str(intersection.volume))
+# print('Difference volume: ' + str(difference.volume))

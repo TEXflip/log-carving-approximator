@@ -72,14 +72,15 @@ def testMultipleCuts():
 
 
 
-if(cubo.is_watertight == True):
-    print('Cubo is watertight')
-else:
-    print('Cubo is not watertight')
-    trimesh.repair.fill_holes(cubo)
+# if(cubo.is_watertight == True):
+#     print('Cubo is watertight')
+# else:
+#     print('Cubo is not watertight')
+#     trimesh.repair.fill_holes(cubo)
 
 
 cuboTagliato = cubo
+
 for i in range(30):
 
     # genero 2 fette, ognuna caratterizzata da un punto random nella bounding box della mesh e da un versore random
