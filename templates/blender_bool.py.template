@@ -1,0 +1,59 @@
+import bpy
+from mathutils import Vector, Quaternion
+from math import radians
+import os
+import addon_utils
+
+def vecRotation(v1, v2):
+    v2.normalize()
+    if v1 == -v2:
+        u.orthogonal().normalize()
+        return Quaternion((0, u[0], u[1], u[2])).to_euler()
+    half = (v1+v2).normalized()
+    cross = v1.cross(half)
+    return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
+
+objects = bpy.data.objects
+
+# enable addon if present
+addon_name = 'object_print3d_utils'
+if addon_utils.enable(addon_name):
+    print("enabled", addon_name)
+else:
+    print(addon_name, "is not found")
+
+#bpy.ops.object.mode_set(mode='OBJECT')
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.delete(use_global=True)
+
+mesh_pre = $MESH_PRE
+mesh_post = os.path.abspath(r'$MESH_POST')
+# mesh_pre = ["/home/tex/Documenti/log-carving-approximator/3D models/bulbasaur.STL"]
+# mesh_post = os.path.abspath(r'/home/tex/Documenti/log-carving-approximator/blender sessions/out.stl')
+
+for filename in mesh_pre:
+    bpy.ops.import_mesh.stl(filepath=os.path.abspath(filename))
+
+bpy.ops.mesh.primitive_cube_add(location=(0, 0, 250), size=500, rotation=(0.0, 0.0, 0.0), enter_editmode=False)
+empty = bpy.data.objects.new( "empty", None)
+bpy.data.collections["Collection"].objects.link(empty)
+
+mesh = objects[0]
+# mesh.data.flip_normals()
+cube = objects['Cube']
+cube.parent = empty
+empty.location = $ORIGIN
+empty.rotation_euler = vecRotation(Vector((0,0,1)), Vector($NORMAL))
+
+bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
+bool.double_threshold = 0.000025
+bool.object = cube
+bool.operation = 'INTERSECT'
+cube.display_type = 'WIRE'
+bpy.ops.object.mode_set(mode = 'OBJECT')
+mesh.select_set(True)
+bpy.ops.object.convert()
+bpy.ops.object.select_all(action='DESELECT')
+mesh.select_set(True)
+bpy.ops.mesh.print3d_clean_non_manifold()
+bpy.ops.export_mesh.stl(filepath=mesh_post, use_selection=True)

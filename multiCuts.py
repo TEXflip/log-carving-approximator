@@ -102,24 +102,25 @@ def cutObject():
 
 
     # taglio 1 = volume tolto
-    unione = trimesh.boolean.union([slice2, slice1], 'scad')
-
+    unione = trimesh.boolean.union([slice2, slice1], engine='scad')
+    # unione.show()
 
     # aggiorno volume rimasto
     # in questo punto viene generata la nuova mesh non watertight
 
     cuboTagliato.append(trimesh.boolean.difference([cuboTagliato[-1], unione], engine='scad'))
-
+        
 
 
     # teoricamente, i metodi di repair dovrebbero rendere una mesh watertight. Però non funzionano in questo caso
     j = 1
-    if cuboTagliato[-1] == False:
-        while cuboTagliato[-1] == False:
-            trimesh.repair.fill_holes(cuboTagliato[-1])
-            trimesh.repair.fix_inversion(cuboTagliato[-1])
-            trimesh.repair.fix_normals(cuboTagliato[-1])
-            trimesh.repair.fix_winding(cuboTagliato[-1])
+    if not cuboTagliato[-1].is_watertight:
+        # while not cuboTagliato[-1].is_watertight:
+        trimesh.repair.fill_holes(cuboTagliato[-1])
+        trimesh.repair.fix_inversion(cuboTagliato[-1])
+        trimesh.repair.fix_normals(cuboTagliato[-1])
+        trimesh.repair.fix_winding(cuboTagliato[-1])
+        cuboTagliato[-1].show()
 
 
 
@@ -139,6 +140,7 @@ def cutObject():
 
 for i in range(30):
     cutObject()
+
 
 
 
