@@ -6,7 +6,7 @@ import os
 
 _search_path = os.environ['PATH']
 _blender_executable = find_executable('blender', path=_search_path)
-template = open('templates/blender_bool.py.template').read()
+template = open('templates/blender_bool_remesh.py.template').read()
 
 def customSliceMesh(mesh, origin, normal):
     # exists = _blender_executable is not None

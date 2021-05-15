@@ -2,6 +2,7 @@ import numpy as np
 import trimesh
 import json
 from customBlenderScripts import customSliceMesh
+import random
 
 sphere = trimesh.load('3D models/sphere.stl', force='mesh')
 cylinder = trimesh.load('3D models/cylinder.stl', force='mesh')
@@ -9,7 +10,8 @@ cylinder = trimesh.load('3D models/cylinder.stl', force='mesh')
 sphereVolume = sphere.volume
 oldOrig = {}
 planes = []
-print(len(sphere.face_normals))
+
+cuts = []
 for i, normal in enumerate(sphere.face_normals):
     face = sphere.faces[i]
     origin = sphere.vertices[face[0]]
@@ -17,21 +19,31 @@ for i, normal in enumerate(sphere.face_normals):
     intOrig = (origin*1000).astype(np.int32)
     origin = origin.tolist()
     hashValue = hash(intOrig)
-
     if not (hashValue in oldOrig):
         oldOrig[hashValue] = 0
         normal = (np.array(normal) * -1).tolist()
-        # cylinder = cylinder.slice_plane(plane_origin=origin, plane_normal=normal, cap=True, cached_dots=None)
-        cylinder = customSliceMesh(cylinder, origin, normal)
-        planes.append({"orig":origin, "norm":normal})
-        cylinder.merge_vertices()
-        print("i: {2}\t Volume diff.: {0} \t vertices: {1}".format(cylinder.volume - sphereVolume, len(cylinder.vertices),i))
+        cuts.append([i, origin, normal])
 
-        # if not cylinder.is_watertight:
-        #     cylinder.show()
-        #     cylinder.export('cylinderCut.stl')
+random.shuffle(cuts)
+print('total cuts: ', len(cuts))
 
-    if i > 20: # il 12 taglio non e' watertight
+for i, cut in enumerate(cuts):
+    # cylinder = cylinder.slice_plane(plane_origin=origin, plane_normal=normal, cap=True, cached_dots=None)
+    out = customSliceMesh(cylinder, cut[1], cut[2])
+    planes.append({"orig":cut[1], "norm":cut[2]})
+
+    try:
+        out.volume
+    except:
+        print("i: ",i,"\t slice error: cut rejected")
+        continue
+    else:
+        cylinder = out
+
+    # cylinder.merge_vertices()
+    print("i: {2}\t Volume diff.: {0} \t vertices: {1}".format(cylinder.volume - sphereVolume, len(cylinder.vertices),i))
+
+    if cylinder.volume - sphereVolume < 0.1:
         break
 
 file_out = open('blender sessions/planes.json', "w")
