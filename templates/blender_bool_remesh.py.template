@@ -47,7 +47,7 @@ empty.location = $ORIGIN
 empty.rotation_euler = vecRotation(Vector((0,0,1)), Vector($NORMAL))
 
 bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
-bool.double_threshold = 0.000001
+bool.double_threshold = 0.000025
 bool.object = cube
 bool.operation = 'INTERSECT'
 remesh = mesh.modifiers.new(type='REMESH', name='remesh')
