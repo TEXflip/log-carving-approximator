@@ -17,4 +17,15 @@ pip3 install networkx
 pip3 install rtree
 pip3 install triangle
 
+pip install future-fstrings
+echo "Now cat this file and manually proceed with the last part"
+# Download the 544MB anaconda installer package from their website.
+# Then:
+# chmod +x /Download/Anaconda...
+# For the next command, remember to say yes to the conda init option
+# ./Anaconda...
+
+# Then:
+# conda install -c kitsune.one python-blender
+
 echo "Success!"
