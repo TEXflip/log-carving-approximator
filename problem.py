@@ -1,7 +1,9 @@
-from inspyred.benchmarks import Benchmark
+from inspyred.benchmarks import ec
 import bpy
 import bmesh
 from mathutils import Vector, Quaternion
+import trimesh
+import numpy as np
 
 class BlenderProblem:
     def __init__(self, targetMeshPath, carvingMeshPath):
@@ -24,15 +26,16 @@ class BlenderProblem:
         # import sphere
         bpy.ops.import_mesh.stl(filepath=targetMeshPath) # '3D models/sphere.stl'
         self.targetMesh = objects['Sphere']
-    
+
     def computeVolume(self, mesh):
         bm = bmesh.new()
         bm.from_mesh(mesh)
         volume = bm.calc_volume()
         return volume * (self.context.scene.unit_settings.scale_length ** 3.0) * 1e6
 
-    def vecRotation(v1, v2):
+    def vecRotation(self, v2):
         # v1.normalize()
+        v1 = Vector((0,0,1))
         v2.normalize()
         if v1 == -v2:
             v1.orthogonal().normalize()
@@ -47,7 +50,7 @@ class BlenderProblem:
         bpy.data.collections["Collection"].objects.link(empty)
         newcube.parent = empty
         empty.location = origin
-        empty.rotation_euler = self.vecRotation(Vector((0,0,1)), Vector(normal))
+        empty.rotation_euler = self.vecRotation(Vector(normal))
         bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
         bool.double_threshold = 0.000025
         bool.object = newcube
@@ -55,21 +58,54 @@ class BlenderProblem:
         return bool
 
 class PlaneCut(BlenderProblem):
-    def __init__(self, targetMeshPath, carvingMeshPath):
-        super(targetMeshPath, carvingMeshPath)
+    def __init__(self, targetMeshPath, carvingMeshPath, random):
+        super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
+        self.random = random
         self.targetVolume = self.computeVolume(self.targetMesh.data)
-        self.maximize = False
+        self.maximize = True
+        self.terminator = ec.terminators.generation_termination
+        self.replacer = ec.replacers.generational_replacement    
+        self.variator = [ec.variators.uniform_crossover,ec.variators.gaussian_mutation]
+        self.selector = ec.selectors.tournament_selection
+
+        sphere_trimesh = trimesh.load(targetMeshPath, force='mesh') # only in lecture to read the vertexes
+        oldOrig = {}
+        self.cuts = []
+
+        for i, normal in enumerate(sphere_trimesh.face_normals):
+            face = sphere_trimesh.faces[i]
+            origin = sphere_trimesh.vertices[face[0]]
+
+            intOrig = (origin*1000).astype(np.int32)
+            origin = origin.tolist()
+            hashValue = hash(intOrig)
+            if not (hashValue in oldOrig):
+                oldOrig[hashValue] = 0
+                normal = (np.array(normal) * -1).tolist()
+                self.cuts.append({'origin':origin, 'normal':normal})
+
+        self.random.shuffle(self.cuts)
     
     def generator(self, random, args):
-        # piani di taglio 
-        return {'origin': [0,0,0], 'normal': [0,0,1]}
+        # piani di taglio
+        rndint = self.random.randint(0, len(self.cuts))
+        return self.cuts[rndint]
         
     def evaluator(self, candidates, args):
         fitness = []
         for c in candidates:
-            self.slice(self.carvingMesh, c.origin, c.normal) # gestire molteplici tagli contemporaneamente
-            bpy.context.view_layer.objects.active = self.carvingMesh
+            tempMesh = self.carvingMesh.copy()
+            tempMesh.data = self.carvingMesh.data.copy()
+            bpy.data.collections["Collection"].objects.link(tempMesh)
+            bool = self.slice(tempMesh, c['origin'], c['normal'])
+            if bpy.context.mode != 'OBJECT':
+                bpy.ops.object.mode_set(mode = 'OBJECT')
+            bpy.context.view_layer.objects.active = tempMesh
             bpy.ops.object.modifier_apply(modifier=bool.name)
-            currVol = self.computeVolume(self.carvingMesh.data)
+            volume = self.computeVolume(self.carvingMesh.data)
+            fitness.append(volume)
+            bpy.ops.object.select_all(action='DESELECT')
+            tempMesh.select_set(True)
+            bpy.ops.object.delete()
 
-        return 0 # volume
+        return fitness
