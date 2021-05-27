@@ -27,5 +27,6 @@ echo "Now cat this file and manually proceed with the last part"
 
 # Then:
 # conda install -c kitsune.one python-blender
+# conda install -c conda-forge trimesh
 
 echo "Success!"
