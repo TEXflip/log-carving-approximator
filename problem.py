@@ -77,12 +77,13 @@ class PlaneCut(BlenderProblem):
             origin = sphere_trimesh.vertices[face[0]]
 
             intOrig = (origin*1000).astype(np.int32)
-            origin = origin.tolist()
+            # origin = origin
             hashValue = hash(intOrig)
             if not (hashValue in oldOrig):
                 oldOrig[hashValue] = 0
-                normal = (np.array(normal) * -1).tolist()
-                self.cuts.append({'origin':origin, 'normal':normal})
+                normal = (np.array(normal) * -1)
+                candidate = np.concatenate((origin, normal), axis=0)
+                self.cuts.append(candidate)
 
         self.random.shuffle(self.cuts)
     
@@ -97,7 +98,7 @@ class PlaneCut(BlenderProblem):
             tempMesh = self.carvingMesh.copy()
             tempMesh.data = self.carvingMesh.data.copy()
             bpy.data.collections["Collection"].objects.link(tempMesh)
-            bool = self.slice(tempMesh, c['origin'], c['normal'])
+            bool = self.slice(tempMesh, c[:3], c[3:])
             if bpy.context.mode != 'OBJECT':
                 bpy.ops.object.mode_set(mode = 'OBJECT')
             bpy.context.view_layer.objects.active = tempMesh
