@@ -9,6 +9,7 @@ args["sigma"] = 1.0
 
 args["num_selected"] = 5 # population size
 args["num_offspring"] = 50 #lambda
+#args["tournament_size"] = 2
 
 args["fig_title"] = 'ES'
 
@@ -23,6 +24,8 @@ if __name__ == "__main__":
     algorithm.replacer = ec.replacers.generational_replacement    
     algorithm.variator = [ec.variators.uniform_crossover,ec.variators.gaussian_mutation]
     algorithm.selector = ec.selectors.tournament_selection
+
+    # Generates a random plane
     generator = problem.generator
     evaluator = problem.evaluator
     # algorithm.observer = [plot_utils.plot_observer,plot_utils.initial_pop_observer]
