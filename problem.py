@@ -27,11 +27,20 @@ class BlenderProblem:
         bpy.ops.import_mesh.stl(filepath=targetMeshPath) # '3D models/sphere.stl'
         self.targetMesh = objects['Sphere']
 
+
     def computeVolume(self, mesh):
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
+        me = bpy.context.object.data
+
+        # Get a BMesh representation
+        bm = bmesh.new()   # create an empty BMesh
+        bm.from_mesh(me)   # fill it in from a Mesh
+
         volume = bm.calc_volume()
-        return volume * (self.context.scene.unit_settings.scale_length ** 3.0) * 1e6
+
+        # Finish up, write the bmesh back to the mesh
+        bm.to_mesh(me)
+        bm.free()
+        return volume
 
     def vecRotation(self, v2):
         # v1.normalize()
