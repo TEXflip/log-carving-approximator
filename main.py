@@ -47,7 +47,7 @@ args["tournament_size"] = 3
 args["fig_title"] = 'ES'
 
 if __name__ == "__main__":
-    rng = NumpyRandomWrapper(0) # in sostanza, è una sorta di random.seed()
+    rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
     problem = PlaneCut('3D models/sphere.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}

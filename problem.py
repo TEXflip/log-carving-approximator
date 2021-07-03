@@ -29,18 +29,14 @@ class BlenderProblem:
 
 
     def computeVolume(self, mesh):
-        me = bpy.context.object.data
-
         # Get a BMesh representation
         bm = bmesh.new()   # create an empty BMesh
-        bm.from_mesh(me)   # fill it in from a Mesh
+        bm.from_mesh(mesh)   # fill it in from a Mesh
 
         volume = bm.calc_volume()
 
-        # Finish up, write the bmesh back to the mesh
-        bm.to_mesh(me)
         bm.free()
-        return volume
+        return volume # * 1000
 
     # from normal to euler rotation coordinates
     def vecRotation(self, v2):
@@ -76,6 +72,18 @@ class BlenderProblem:
 
         return bool
     
+    # compute the minimum relative distance respect to the normal of the plane
+    # and all the points of the mesh
+    def minDistFromPlane(self, obj, origin, normal):
+        vxs = obj.data.vertices
+        min = float('inf')
+        for v in vxs:
+            p1 = origin - obj.matrix_world @ v.co
+            d = -p1.dot(normal)
+            if min > d:
+                min = d
+        return min
+
     # Make a slice and comupte the volume
     def sliceAndVolume(self, slice):
 
@@ -94,7 +102,7 @@ class BlenderProblem:
         bpy.ops.object.modifier_apply(modifier=bool.name)
 
         #compute volume
-        volume = self.computeVolume(self.carvingMesh.data)
+        volume = self.computeVolume(tempMesh.data)
 
         # remove the copy
         bpy.ops.object.select_all(action='DESELECT')
@@ -124,6 +132,7 @@ class PlaneCut(BlenderProblem):
         self.random = random
         self.targetVolume = self.computeVolume(self.targetMesh.data)
         self.initialVolume = self.computeVolume(self.carvingMesh.data)
+        print("carving Mesh initial Volume: ",self.initialVolume)
         self.maximize = True
         self.terminator = ec.terminators.generation_termination
         self.replacer = ec.replacers.generational_replacement    
@@ -155,10 +164,18 @@ class PlaneCut(BlenderProblem):
         return self.cuts[rndint]
         
     def evaluator(self, candidates, args):
-        
+
         fitness = []
         for c in candidates:
             volume = self.sliceAndVolume(c)
-            fitness.append(self.initialVolume - volume)
+            candidateFitness = (self.initialVolume - volume) - self.constraint(c)
+            fitness.append(candidateFitness)
 
         return fitness
+
+    def constraint(self, c):
+        relDist = self.minDistFromPlane(self.targetMesh, c[:3], c[3:])
+        if relDist > 0:
+            return 0
+        else:
+            return -relDist * 100
