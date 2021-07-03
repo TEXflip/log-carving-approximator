@@ -68,7 +68,7 @@ if __name__ == "__main__":
     for i in range(2):
         final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
         best, wrost = getBestWrost(final_pop)
-        problem.sliceAndApply(best)
+        problem.sliceAndApply(wrost) # wrost and best are swapped for some reason
 
     reactivateLog(oldStdOut)
 
