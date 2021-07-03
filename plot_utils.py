@@ -145,13 +145,11 @@ def plot_observer(population, num_generations, num_evaluations, args):
     plt.xlim((0, num_evaluations))
     plt.ylim((ymin - 0.1*yrange, ymax + 0.1*yrange))
     plt.draw()
+    plt.pause(0.001)
     plt.legend()
     plt.show()
 
-def initial_pop_observer(population, num_generations, num_evaluations, 
-                         args):
-    if num_generations == 0 :
-        args["initial_pop_storage"]["individuals"] = asarray([guy.candidate 
-                                                 for guy in population]) 
-        args["initial_pop_storage"]["fitnesses"] = asarray([guy.fitness 
-                                          for guy in population]) 
+def initial_pop_observer(population, num_generations, num_evaluations, args):
+    if num_generations == 0:
+        args["initial_pop_storage"]["individuals"] = np.asarray([guy.candidate for guy in population]) 
+        args["initial_pop_storage"]["fitnesses"] = np.asarray([guy.fitness for guy in population]) 

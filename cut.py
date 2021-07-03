@@ -136,6 +136,11 @@ class taglio:
         bpy.context.view_layer.objects.active = self.cutSon
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
+def is_inside(p, obj):    
+    result, point, normal, face = obj.closest_point_on_mesh(p)    
+    p2 = point-p    
+    v = p2.dot(normal)    
+    return not(v < 0.0)
 
 # verifica se il taglio interseca la mesh obiettivo
 # obj1 e obj2 devono essere degli objects
@@ -175,11 +180,6 @@ def verifyIntersect(obj1, obj2):
     else:
         return False
 
-def is_inside(p, obj):    
-    result, point, normal, face = obj.closest_point_on_mesh(p)    
-    p2 = point-p    
-    v = p2.dot(normal)    
-    return not(v < 0.0)
 
 
 bpy.ops.mesh.primitive_cube_add(location = (0, 0, 0), scale=(0.6, 0.6, 0.6))
