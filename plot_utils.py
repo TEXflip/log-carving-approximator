@@ -4,15 +4,15 @@ import numpy as np
 
 def plot_1D(axis, problem, x_limits) :
     dx = (x_limits[1] - x_limits[0])/200.0
-    x = arange(x_limits[0], x_limits[1]+dx, dx)
+    x = np.arange(x_limits[0], x_limits[1]+dx, dx)
     x = x.reshape(len(x),1)
     y = problem.evaluator(x, None)
     axis.plot(x,y,'-b')
 
 def plot_2D(axis, problem, x_limits) :
     dx = (x_limits[1] - x_limits[0])/50.0
-    x = arange(x_limits[0], x_limits[1]+dx, dx)
-    z = asarray( [problem.evaluator([[i,j] for i in x], None) for j in x])
+    x = np.arange(x_limits[0], x_limits[1]+dx, dx)
+    z = np.asarray( [problem.evaluator([[i,j] for i in x], None) for j in x])
     return axis.contourf(x, x, z, 64, cmap=cm.hot_r)
     
 def plot_results_1D(problem, individuals_1, fitnesses_1, 

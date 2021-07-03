@@ -42,6 +42,7 @@ class BlenderProblem:
         bm.free()
         return volume
 
+    # from normal to euler rotation coordinates
     def vecRotation(self, v2):
         # v1.normalize()
         v1 = Vector((0,0,1))
@@ -53,24 +54,76 @@ class BlenderProblem:
         cross = v1.cross(half)
         return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
 
+    # generate the boolean modifier that slices the model 
+    # according to an orgin and a normal
     def slice(self, mesh, origin, normal):
+
+        # copy the cube
         newcube = self.cube.copy()
         empty = bpy.data.objects.new("empty", None)
+
+        # create empty to rotate the cube
         bpy.data.collections["Collection"].objects.link(empty)
         newcube.parent = empty
         empty.location = origin
         empty.rotation_euler = self.vecRotation(Vector(normal))
+
+        # create boolean modifier on the carving mesh and apply cube boolean intersection
         bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
         bool.double_threshold = 0.000025
         bool.object = newcube
         bool.operation = 'INTERSECT'
+
         return bool
+    
+    # Make a slice and comupte the volume
+    def sliceAndVolume(self, slice):
+
+        # copy the carving mesh
+        tempMesh = self.carvingMesh.copy()
+        tempMesh.data = self.carvingMesh.data.copy()
+        bpy.data.collections["Collection"].objects.link(tempMesh)
+
+        # apply slice
+        bool = self.slice(tempMesh, slice[:3], slice[3:])
+
+        # apply boolean modifier
+        if bpy.context.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+        bpy.context.view_layer.objects.active = tempMesh
+        bpy.ops.object.modifier_apply(modifier=bool.name)
+
+        #compute volume
+        volume = self.computeVolume(self.carvingMesh.data)
+
+        # remove the copy
+        bpy.ops.object.select_all(action='DESELECT')
+        tempMesh.select_set(True)
+        bpy.ops.object.delete()
+
+        return volume
+    
+    # make a slice and save the resulting model
+    def sliceAndSave(self, slice, filepath):
+        tempMesh = self.carvingMesh.copy()
+        tempMesh.data = self.carvingMesh.data.copy()
+        bpy.data.collections["Collection"].objects.link(tempMesh)
+        bool = self.slice(tempMesh, slice[:3], slice[3:])
+        if bpy.context.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+        bpy.context.view_layer.objects.active = tempMesh
+        bpy.ops.object.modifier_apply(modifier=bool.name)
+        bpy.ops.object.select_all(action='DESELECT')
+        tempMesh.select_set(True)
+        bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
+        bpy.ops.object.delete()
 
 class PlaneCut(BlenderProblem):
     def __init__(self, targetMeshPath, carvingMeshPath, random):
         super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
         self.random = random
         self.targetVolume = self.computeVolume(self.targetMesh.data)
+        self.initialVolume = self.computeVolume(self.carvingMesh.data)
         self.maximize = True
         self.terminator = ec.terminators.generation_termination
         self.replacer = ec.replacers.generational_replacement    
@@ -102,20 +155,10 @@ class PlaneCut(BlenderProblem):
         return self.cuts[rndint]
         
     def evaluator(self, candidates, args):
+        
         fitness = []
         for c in candidates:
-            tempMesh = self.carvingMesh.copy()
-            tempMesh.data = self.carvingMesh.data.copy()
-            bpy.data.collections["Collection"].objects.link(tempMesh)
-            bool = self.slice(tempMesh, c[:3], c[3:])
-            if bpy.context.mode != 'OBJECT':
-                bpy.ops.object.mode_set(mode = 'OBJECT')
-            bpy.context.view_layer.objects.active = tempMesh
-            bpy.ops.object.modifier_apply(modifier=bool.name)
-            volume = self.computeVolume(self.carvingMesh.data)
-            fitness.append(volume)
-            bpy.ops.object.select_all(action='DESELECT')
-            tempMesh.select_set(True)
-            bpy.ops.object.delete()
+            volume = self.sliceAndVolume(c)
+            fitness.append(self.initialVolume - volume)
 
         return fitness
