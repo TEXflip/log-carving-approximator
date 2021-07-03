@@ -36,7 +36,7 @@ def getBestWrost(pop):
 
 args = {}
 args["initial_pop_storage"] = {}
-args["max_generations"] = 20
+args["max_generations"] = 10
 args["sigma"] = 5.0
 args["crossover_rate"] = 0.5
 
@@ -63,18 +63,19 @@ if __name__ == "__main__":
     generator = problem.generator
     evaluator = problem.evaluator
 
-
     oldStdOut = supressLog()
 
-    final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+    for i in range(2):
+        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+        best, wrost = getBestWrost(final_pop)
+        problem.sliceAndApply(best)
 
     reactivateLog(oldStdOut)
 
     for i, c in enumerate(final_pop):
         print(str(i)+') ', c)
 
-    best, wrost = getBestWrost(final_pop)
-    problem.sliceAndSave(best, "finalModel.stl")
+    problem.SaveCarvingMesh("finalModel.stl")
     
     plt.ioff()
     plt.show()

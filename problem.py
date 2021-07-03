@@ -17,16 +17,27 @@ class BlenderProblem:
 
         # create base cube for the boolean operation
         bpy.ops.mesh.primitive_cube_add(location=(0, 0, 250), size=500, rotation=(0.0, 0.0, 0.0), enter_editmode=False)
-        self.cube = objects['Cube']
+        self.cube = objects["Cube"]
 
         # import cylinder
-        bpy.ops.import_mesh.stl(filepath=carvingMeshPath) # '3D models/cylinder.stl'
-        self.carvingMesh = objects['Cylinder']
+        self.carvingMesh = self.importStl(carvingMeshPath)
 
         # import sphere
-        bpy.ops.import_mesh.stl(filepath=targetMeshPath) # '3D models/sphere.stl'
-        self.targetMesh = objects['Sphere']
+        self.targetMesh = self.importStl(targetMeshPath)
+        
+    # custom importing function correctly return the imported object
+    def importStl(self, filepath):
+        old_objs = set(bpy.data.objects)
+        bpy.ops.import_mesh.stl(filepath=filepath)
+        imported_objs = set(bpy.data.objects) - old_objs
+        return imported_objs.pop()
 
+    def updateCarvingMesh(self, carvingMeshPath):
+        bpy.ops.object.select_all(action='DESELECT')
+        self.carvingMesh.select_set(True)
+        bpy.ops.object.delete()
+        # import new carvingMesh
+        self.carvingMesh = self.importStl(carvingMeshPath)
 
     def computeVolume(self, mesh):
         # Get a BMesh representation
@@ -84,7 +95,7 @@ class BlenderProblem:
                 min = d
         return min
 
-    # Make a slice and comupte the volume
+    # Make a slice and compute the volume
     def sliceAndVolume(self, slice):
 
         # copy the carving mesh
@@ -107,24 +118,36 @@ class BlenderProblem:
         # remove the copy
         bpy.ops.object.select_all(action='DESELECT')
         tempMesh.select_set(True)
+        bpy.data.objects["empty"].select_set(True)
+        bpy.ops.object.delete()
+
+        return volume
+
+    def sliceAndApply(self, slice):
+        # apply slice
+        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
+
+        # apply boolean modifier
+        if bpy.context.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+        bpy.context.view_layer.objects.active = self.carvingMesh
+        bpy.ops.object.modifier_apply(modifier=bool.name)
+
+        #compute volume
+        volume = self.computeVolume(self.carvingMesh.data)
+
+        # remove the empty
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.data.objects["empty"].select_set(True)
         bpy.ops.object.delete()
 
         return volume
     
-    # make a slice and save the resulting model
-    def sliceAndSave(self, slice, filepath):
-        tempMesh = self.carvingMesh.copy()
-        tempMesh.data = self.carvingMesh.data.copy()
-        bpy.data.collections["Collection"].objects.link(tempMesh)
-        bool = self.slice(tempMesh, slice[:3], slice[3:])
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.context.view_layer.objects.active = tempMesh
-        bpy.ops.object.modifier_apply(modifier=bool.name)
+    # save the resulting model
+    def SaveCarvingMesh(self, filepath):
         bpy.ops.object.select_all(action='DESELECT')
-        tempMesh.select_set(True)
+        self.carvingMesh.select_set(True)
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
-        bpy.ops.object.delete()
 
 class PlaneCut(BlenderProblem):
     def __init__(self, targetMeshPath, carvingMeshPath, random):
@@ -178,4 +201,4 @@ class PlaneCut(BlenderProblem):
         if relDist > 0:
             return 0
         else:
-            return -relDist * 100
+            return -relDist * 1000
