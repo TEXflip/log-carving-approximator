@@ -36,9 +36,10 @@ def getBestWrost(pop):
 
 args = {}
 args["initial_pop_storage"] = {}
-args["max_generations"] = 10
+args["max_generations"] = 100
 args["sigma"] = 5.0
 args["crossover_rate"] = 0.5
+args["slice_application_evaluations"] = 100 # number of evaluations before apply the best slice
 
 args["pop_size"] = args["num_selected"] = 10 # population size
 args["num_offspring"] = 10 #lambda
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     algorithm.replacer = ec.replacers.generational_replacement
     algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
     algorithm.selector = ec.selectors.tournament_selection
-    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer]
+    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer, problem.customObserver]
 
     # Generates a random plane
     generator = problem.generator
@@ -65,10 +66,7 @@ if __name__ == "__main__":
 
     oldStdOut = supressLog()
 
-    for i in range(2):
-        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
-        best, wrost = getBestWrost(final_pop)
-        problem.sliceAndApply(wrost) # wrost and best are swapped for some reason
+    final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
 
     reactivateLog(oldStdOut)
 

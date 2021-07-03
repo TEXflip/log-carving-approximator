@@ -202,3 +202,13 @@ class PlaneCut(BlenderProblem):
             return 0
         else:
             return -relDist * 1000
+
+    def customObserver(self, population, num_generations, num_evaluations, args):
+        if num_evaluations % args["slice_application_evaluations"] == 0:
+            final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
+            final_pop_candidates = np.asarray([guy.candidate for guy in population])
+            
+            sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
+            final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
+            final_pop_candidates = final_pop_candidates[sort_indexes]
+            self.sliceAndApply(final_pop_candidates[0])
