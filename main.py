@@ -50,7 +50,7 @@ args["fig_title"] = 'ES'
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
-    problem = PlaneCutProblem('3D models/sphere.stl', '3D models/cylinder.stl', rng)
+    problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}
     
@@ -82,6 +82,6 @@ if __name__ == "__main__":
 
     cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
     problem.SaveCarvingMesh("finalModel.stl")
-    command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "3D models/sphere.stl" ' + cuts_string
+    command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" ' + cuts_string
     print(command)
     os.system(command)

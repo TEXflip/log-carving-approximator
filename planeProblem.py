@@ -7,6 +7,8 @@ import numpy as np
 class BlenderPlaneProblem:
     def __init__(self, targetMeshPath, carvingMeshPath):
         # reset the workspace
+        self.targetMeshPath = targetMeshPath
+        self.carvingMeshPath = carvingMeshPath
         objects = bpy.data.objects
         self.context = bpy.context
         if bpy.context.mode != 'OBJECT':
@@ -139,7 +141,7 @@ class BlenderPlaneProblem:
 
 class PlaneCutProblem(BlenderPlaneProblem):
     def __init__(self, targetMeshPath, carvingMeshPath, rng):
-        super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
+        super(PlaneCutProblem, self).__init__(targetMeshPath, carvingMeshPath)
         self.rng = rng
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
