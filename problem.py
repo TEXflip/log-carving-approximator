@@ -39,10 +39,10 @@ class BlenderProblem:
         # import new carvingMesh
         self.carvingMesh = self.importStl(carvingMeshPath)
 
-    def computeVolume(self, mesh):
+    def computeVolume(self, obj):
         # Get a BMesh representation
         bm = bmesh.new()   # create an empty BMesh
-        bm.from_mesh(mesh)   # fill it in from a Mesh
+        bm.from_object(obj, bpy.context.evaluated_depsgraph_get())
 
         volume = bm.calc_volume()
 
@@ -110,14 +110,15 @@ class BlenderProblem:
         if bpy.context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode = 'OBJECT')
         bpy.context.view_layer.objects.active = tempMesh
-        bpy.ops.object.modifier_apply(modifier=bool.name)
+#        bpy.ops.object.modifier_apply(modifier=bool.name)
 
         #compute volume
-        volume = self.computeVolume(tempMesh.data)
+        volume = self.computeVolume(tempMesh)
 
         # remove the copy
         bpy.ops.object.select_all(action='DESELECT')
         tempMesh.select_set(True)
+#        newcube.select_set(True)
         bpy.data.objects["empty"].select_set(True)
         bpy.ops.object.delete()
 
@@ -134,7 +135,7 @@ class BlenderProblem:
         bpy.ops.object.modifier_apply(modifier=bool.name)
 
         #compute volume
-        volume = self.computeVolume(self.carvingMesh.data)
+        volume = self.computeVolume(self.carvingMesh)
 
         # remove the empty
         bpy.ops.object.select_all(action='DESELECT')
@@ -153,8 +154,8 @@ class PlaneCut(BlenderProblem):
     def __init__(self, targetMeshPath, carvingMeshPath, random):
         super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
         self.random = random
-        self.targetVolume = self.computeVolume(self.targetMesh.data)
-        self.initialVolume = self.computeVolume(self.carvingMesh.data)
+        self.targetVolume = self.computeVolume(self.targetMesh)
+        self.initialVolume = self.computeVolume(self.carvingMesh)
         print("carving Mesh initial Volume: ",self.initialVolume)
         self.maximize = True
         self.bestCusts = []
