@@ -1,4 +1,3 @@
-from inspyred.benchmarks import ec
 import bpy
 import bmesh
 from mathutils import Vector, Quaternion
@@ -71,6 +70,7 @@ class BlenderProblem:
 
         # create empty to rotate the cube
         bpy.data.collections["Collection"].objects.link(empty)
+        bpy.data.collections["Collection"].objects.link(newcube)
         newcube.parent = empty
         empty.location = origin
         empty.rotation_euler = self.vecRotation(Vector(normal))
@@ -81,7 +81,7 @@ class BlenderProblem:
         bool.object = newcube
         bool.operation = 'INTERSECT'
 
-        return bool
+        return bool, newcube
     
     # compute the minimum relative distance respect to the normal of the plane
     # and all the points of the mesh
@@ -97,28 +97,16 @@ class BlenderProblem:
 
     # Make a slice and compute the volume
     def sliceAndVolume(self, slice):
-
-        # copy the carving mesh
-        tempMesh = self.carvingMesh.copy()
-        tempMesh.data = self.carvingMesh.data.copy()
-        bpy.data.collections["Collection"].objects.link(tempMesh)
-
         # apply slice
-        bool = self.slice(tempMesh, slice[:3], slice[3:])
-
-        # apply boolean modifier
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.context.view_layer.objects.active = tempMesh
-#        bpy.ops.object.modifier_apply(modifier=bool.name)
+        bool, newcube = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         #compute volume
-        volume = self.computeVolume(tempMesh)
+        volume = self.computeVolume(self.carvingMesh)
 
-        # remove the copy
+        # remove the copies
+        self.carvingMesh.modifiers.remove(bool)
         bpy.ops.object.select_all(action='DESELECT')
-        tempMesh.select_set(True)
-#        newcube.select_set(True)
+        newcube.select_set(True)
         bpy.data.objects["empty"].select_set(True)
         bpy.ops.object.delete()
 
@@ -126,11 +114,9 @@ class BlenderProblem:
 
     def sliceAndApply(self, slice):
         # apply slice
-        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool, newcube = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         # apply boolean modifier
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode = 'OBJECT')
         bpy.context.view_layer.objects.active = self.carvingMesh
         bpy.ops.object.modifier_apply(modifier=bool.name)
 
@@ -139,6 +125,7 @@ class BlenderProblem:
 
         # remove the empty
         bpy.ops.object.select_all(action='DESELECT')
+        newcube.select_set(True)
         bpy.data.objects["empty"].select_set(True)
         bpy.ops.object.delete()
 
