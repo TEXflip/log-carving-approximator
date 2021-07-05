@@ -1,5 +1,5 @@
 from inspyred import ec
-from problem import PlaneCut
+from planeProblem import PlaneCutProblem
 import matplotlib.pylab as plt
 import numpy as np
 import os
@@ -42,15 +42,15 @@ args["crossover_rate"] = 0.2
 args["mutation_rate"] = 0.8
 args["slice_application_generation"] = 20 # number of generations before appling the best slice
 
-args["pop_size"] = args["num_selected"] = 10 # population size
-args["num_offspring"] = 10 #lambda
+args["pop_size"] = args["num_selected"] = 20 # population size
+args["num_offspring"] = 20
 args["tournament_size"] = 3
 
 args["fig_title"] = 'ES'
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
-    problem = PlaneCut('3D models/sphere.stl', '3D models/cylinder.stl', rng)
+    problem = PlaneCutProblem('3D models/sphere.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}
     
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     plt.ioff()
     plt.show()
 
-    cuts_string = '"' + ';'.join(','.join('%0.5f' %x for x in y) for y in problem.bestCuts) + '"'
+    cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
     problem.SaveCarvingMesh("finalModel.stl")
     command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "3D models/sphere.stl" ' + cuts_string
     print(command)

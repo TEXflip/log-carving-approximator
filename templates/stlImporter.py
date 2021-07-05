@@ -29,3 +29,7 @@ for c in argv[2].split(';'):
 
 for c in cuts:
     bpy.ops.mesh.primitive_plane_add(size=3, location=Vector(c[:3]), rotation=vecRotation(Vector(c[3:])))
+
+for o in bpy.data.objects:
+    if "Plane" in o.name:
+        o.display_type = "WIRE"

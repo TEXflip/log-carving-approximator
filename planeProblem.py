@@ -4,7 +4,7 @@ from mathutils import Vector, Quaternion
 import trimesh
 import numpy as np
 
-class BlenderProblem:
+class BlenderPlaneProblem:
     def __init__(self, targetMeshPath, carvingMeshPath):
         # reset the workspace
         objects = bpy.data.objects
@@ -137,7 +137,7 @@ class BlenderProblem:
         self.carvingMesh.select_set(True)
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
-class PlaneCut(BlenderProblem):
+class PlaneCutProblem(BlenderPlaneProblem):
     def __init__(self, targetMeshPath, carvingMeshPath, rng):
         super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
         self.rng = rng
