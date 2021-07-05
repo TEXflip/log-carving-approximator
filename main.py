@@ -6,13 +6,12 @@ import os
 import sys
 import plot_utils
 from inspyred_utils import NumpyRandomWrapper
-import random
 import time
 
 def supressLog():
     # redirect log output to a file
     logfile = 'blender_evolution.log'
-    open(logfile, 'a').close()
+    open(logfile, 'w').close()
     old = os.dup(1)
     sys.stdout.flush()
     os.close(1)
@@ -38,9 +37,10 @@ args = {}
 args["initial_pop_storage"] = {}
 args["max_generations"] = 100
 args["num_elites"] = 1
-args["sigma"] = 10.0
-args["crossover_rate"] = 0.
-args["slice_application_evaluations"] = 200 # number of evaluations before apply the best slice
+args["gaussian_stdev"] = 0.25
+args["crossover_rate"] = 0.2
+args["mutation_rate"] = 0.8
+args["slice_application_generation"] = 20 # number of generations before appling the best slice
 
 args["pop_size"] = args["num_selected"] = 10 # population size
 args["num_offspring"] = 10 #lambda
@@ -59,7 +59,8 @@ if __name__ == "__main__":
     algorithm.replacer = ec.replacers.generational_replacement
     algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
     algorithm.selector = ec.selectors.tournament_selection
-    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer, problem.customObserver]
+    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer, problem.custom_observer]
+    # algorithm.bounder = ec.Bounder([-1,-1,-1,-1,-1,-1], [1,1,1,1,1,1])
 
     # Generates a random plane
     generator = problem.generator
@@ -73,11 +74,14 @@ if __name__ == "__main__":
 
     # for i, c in enumerate(final_pop):
     #     print(str(i)+') ', c)
-    print("selected cuts: ", problem.bestCusts)
+    print("selected cuts: ", problem.bestCuts)
 
-    
+
     plt.ioff()
     plt.show()
 
+    cuts_string = '"' + ';'.join(','.join('%0.5f' %x for x in y) for y in problem.bestCuts) + '"'
     problem.SaveCarvingMesh("finalModel.stl")
-    os.system('blender -P templates/stlImporter.py -- "finalModel.stl" "3D models/sphere.stl"')
+    command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "3D models/sphere.stl" ' + cuts_string
+    print(command)
+    os.system(command)

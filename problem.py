@@ -138,23 +138,23 @@ class BlenderProblem:
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
 class PlaneCut(BlenderProblem):
-    def __init__(self, targetMeshPath, carvingMeshPath, random):
+    def __init__(self, targetMeshPath, carvingMeshPath, rng):
         super(PlaneCut, self).__init__(targetMeshPath, carvingMeshPath)
-        self.random = random
+        self.rng = rng
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
-        print("carving Mesh initial Volume: ",self.initialVolume)
+        print("carving Mesh initial Volume: ", self.initialVolume)
         self.maximize = True
-        self.bestCusts = []
+        self.bestCuts = np.empty((0,6), np.float32)
 
 
-        sphere_trimesh = trimesh.load(targetMeshPath, force='mesh') # only in lecture to read the vertexes
+        target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
         oldOrig = {}
         self.cuts = []
 
-        for i, normal in enumerate(sphere_trimesh.face_normals):
-            face = sphere_trimesh.faces[i]
-            origin = sphere_trimesh.vertices[face[0]]
+        for i, normal in enumerate(target_trimesh.face_normals):
+            face = target_trimesh.faces[i]
+            origin = target_trimesh.vertices[face[0]]
 
             intOrig = (origin*1000).astype(np.int32)
             # origin = origin
@@ -165,11 +165,11 @@ class PlaneCut(BlenderProblem):
                 candidate = np.concatenate((origin, normal), axis=0)
                 self.cuts.append(candidate)
 
-        self.random.shuffle(self.cuts)
+        self.rng.shuffle(self.cuts)
     
     def generator(self, random, args):
         # piani di taglio
-        rndint = self.random.randint(0, len(self.cuts))
+        rndint = random.randint(0, len(self.cuts))
         return self.cuts[rndint]
         
     def evaluator(self, candidates, args):
@@ -191,8 +191,8 @@ class PlaneCut(BlenderProblem):
             return self.initialVolume
 
     # apply the cut after "slice_application_evaluations" evaluations
-    def customObserver(self, population, num_generations, num_evaluations, args):
-        if num_evaluations % args["slice_application_evaluations"] == 0:
+    def custom_observer(self, population, num_generations, num_evaluations, args):
+        if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
             final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
             final_pop_candidates = np.asarray([guy.candidate for guy in population])
             
@@ -202,5 +202,7 @@ class PlaneCut(BlenderProblem):
             self.sliceAndApply(final_pop_candidates[-1])
 
             print("\ngeneration: ", num_generations)
-            print("cut applyed: ", final_pop_candidates[-1],"\n")
-            self.bestCusts.append(final_pop_candidates[-1])
+            print("cut applyed: ", final_pop_candidates[-1])
+            print("fitness: ", final_pop_fitnesses[-1],"\n")
+            # print(final_pop_fitnesses)
+            self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
