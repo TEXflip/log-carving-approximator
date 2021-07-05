@@ -159,7 +159,7 @@ class PlaneCut(BlenderProblem):
         self.maximize = True
         self.terminator = ec.terminators.generation_termination
         self.replacer = ec.replacers.generational_replacement    
-        self.variator = [ec.variators.uniform_crossover,ec.variators.gaussian_mutation]
+        self.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation]
         self.selector = ec.selectors.tournament_selection
 
         sphere_trimesh = trimesh.load(targetMeshPath, force='mesh') # only in lecture to read the vertexes
@@ -201,8 +201,9 @@ class PlaneCut(BlenderProblem):
         if relDist > 0:
             return 0
         else:
-            return -relDist * 1000
+            return -relDist * 100 + 10
 
+    # apply the cut after "slice_application_evaluations" evaluations
     def customObserver(self, population, num_generations, num_evaluations, args):
         if num_evaluations % args["slice_application_evaluations"] == 0:
             final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
@@ -211,4 +212,6 @@ class PlaneCut(BlenderProblem):
             sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
             final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
             final_pop_candidates = final_pop_candidates[sort_indexes]
-            self.sliceAndApply(final_pop_candidates[0])
+            self.sliceAndApply(final_pop_candidates[-1])
+            print("\ngeneration: ", num_generations)
+            print("cut applyed: ", final_pop_candidates[-1],"\n")

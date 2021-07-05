@@ -11,7 +11,7 @@ import time
 
 def supressLog():
     # redirect log output to a file
-    logfile = 'blender_render.log'
+    logfile = 'blender_evolution.log'
     open(logfile, 'a').close()
     old = os.dup(1)
     sys.stdout.flush()
@@ -37,6 +37,7 @@ def getBestWrost(pop):
 args = {}
 args["initial_pop_storage"] = {}
 args["max_generations"] = 100
+args["num_elites"] = 1
 args["sigma"] = 5.0
 args["crossover_rate"] = 0.5
 args["slice_application_evaluations"] = 100 # number of evaluations before apply the best slice
@@ -73,7 +74,9 @@ if __name__ == "__main__":
     for i, c in enumerate(final_pop):
         print(str(i)+') ', c)
 
-    problem.SaveCarvingMesh("finalModel.stl")
     
     plt.ioff()
     plt.show()
+
+    problem.SaveCarvingMesh("finalModel.stl")
+    os.system('blender -P templates/stlImporter.py -- "finalModel.stl" "3D models/sphere.stl"')
