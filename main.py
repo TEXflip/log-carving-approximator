@@ -38,9 +38,9 @@ args = {}
 args["initial_pop_storage"] = {}
 args["max_generations"] = 100
 args["num_elites"] = 1
-args["sigma"] = 5.0
-args["crossover_rate"] = 0.5
-args["slice_application_evaluations"] = 100 # number of evaluations before apply the best slice
+args["sigma"] = 10.0
+args["crossover_rate"] = 0.
+args["slice_application_evaluations"] = 200 # number of evaluations before apply the best slice
 
 args["pop_size"] = args["num_selected"] = 10 # population size
 args["num_offspring"] = 10 #lambda
@@ -71,8 +71,9 @@ if __name__ == "__main__":
 
     reactivateLog(oldStdOut)
 
-    for i, c in enumerate(final_pop):
-        print(str(i)+') ', c)
+    # for i, c in enumerate(final_pop):
+    #     print(str(i)+') ', c)
+    print("selected cuts: ", problem.bestCusts)
 
     
     plt.ioff()

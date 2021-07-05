@@ -157,10 +157,8 @@ class PlaneCut(BlenderProblem):
         self.initialVolume = self.computeVolume(self.carvingMesh.data)
         print("carving Mesh initial Volume: ",self.initialVolume)
         self.maximize = True
-        self.terminator = ec.terminators.generation_termination
-        self.replacer = ec.replacers.generational_replacement    
-        self.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation]
-        self.selector = ec.selectors.tournament_selection
+        self.bestCusts = []
+
 
         sphere_trimesh = trimesh.load(targetMeshPath, force='mesh') # only in lecture to read the vertexes
         oldOrig = {}
@@ -201,7 +199,8 @@ class PlaneCut(BlenderProblem):
         if relDist > 0:
             return 0
         else:
-            return -relDist * 100 + 10
+            # return -relDist * 100 + 10
+            return self.initialVolume
 
     # apply the cut after "slice_application_evaluations" evaluations
     def customObserver(self, population, num_generations, num_evaluations, args):
@@ -213,5 +212,7 @@ class PlaneCut(BlenderProblem):
             final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
             final_pop_candidates = final_pop_candidates[sort_indexes]
             self.sliceAndApply(final_pop_candidates[-1])
+
             print("\ngeneration: ", num_generations)
             print("cut applyed: ", final_pop_candidates[-1],"\n")
+            self.bestCusts.append(final_pop_candidates[-1])
