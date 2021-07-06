@@ -39,6 +39,9 @@ class taglio:
         print('rotZ: ', self.rotZ)
         print('rotEmptyX: ', self.rotEmptyX)
         print('rotEmptyZ: ', self.rotEmptyZ)
+
+    def tolist(self):
+        return [self.distanceFromOrigin, self.desiredAngle, self.rotZ, self.rotY, self.rotEmptyZ, self.rotEmptyX]
     
     def compute(self, _cylinder, _empty):
         # desiredAngle = ampiezza desiderata per la fetta, deve essere fra 0 e 180 gradi
@@ -113,35 +116,23 @@ class taglio:
 
         taglioTemp = taglio(self.distanceFromOrigin, self.desiredAngle, self.rotY, self.rotZ, 
                 self.rotEmptyX, self.rotEmptyZ)
-
-        taglioTemp.compute(_cylinder, _empty)
-        taglioTemp.scale(_cylinder, scaleFactor)
-        taglioTemp.applyTransform(_cylinder, _empty)
-
-        # create copy of meshToCarve to apply the boolean modifiers
-        meshToCarveTemp = meshToCarve.copy()
-        bpy.context.view_layer.objects.active = meshToCarveTemp
-
+        
         # apply the modifiers
-        bpy.ops.object.modifier_add(type='BOOLEAN')
-        bpy.context.object.modifiers["Boolean"].object = _cylinder
-        bpy.ops.object.modifier_apply(modifier="Boolean")
-
-        bpy.context.view_layer.objects.active = meshToCarve
-        me = bpy.context.object.data
-
+        bool = meshToCarve.modifiers.new(type="BOOLEAN", name="bool")
+        bool.double_threshold = 0.000025
+        bool.object = _cylinder
+        bool.operation = 'DIFFERENCE'
+        
         # Get a BMesh representation
         bm = bmesh.new()   # create an empty BMesh
-        bm.from_mesh(me)   # fill it in from a Mesh
+        bm.from_object(meshToCarve, bpy.context.evaluated_depsgraph_get())
 
         volume = bm.calc_volume()
-
-        # Finish up, write the bmesh back to the mesh
-        bm.to_mesh(me)
+        
         bm.free()
-
-        bpy.data.objects.remove(meshToCarveTemp, do_unlink=True)
-
+        
+        meshToCarve.modifiers.remove(bool)
+        
         return volume
 
         
@@ -220,40 +211,36 @@ class BlenderWedgeProblem:
         bpy.ops.object.delete(use_global=True)
         
         # import cylinder
-        bpy.ops.import_mesh.stl(filepath=carvingMeshPath) # '3D models/cylinder.stl'
-        self.carvingMesh = objects['Cylinder']
+        self.carvingMesh = self.importStl(carvingMeshPath)
         
         # import sphere
-        bpy.ops.import_mesh.stl(filepath=targetMeshPath) # '3D models/sphere.stl'
-        self.targetMesh = objects['Sphere']
+        self.targetMesh = self.importStl(targetMeshPath)
         
         self.random = random
-        self.targetVolume = self.computeVolume(self.targetMesh.data)
-        self.initialVolume = self.computeVolume(self.carvingMesh.data)
+        self.targetVolume = self.computeVolume(self.targetMesh)
+        self.initialVolume = self.computeVolume(self.carvingMesh)
         self.maximize = True
-        self.terminator = ec.terminators.generation_termination
-        self.replacer = ec.replacers.generational_replacement    
-        self.variator = [ec.variators.uniform_crossover,ec.variators.gaussian_mutation]
-        self.selector = ec.selectors.tournament_selection
 
+    # custom importing function correctly return the imported object
+    def importStl(self, filepath):
+        old_objs = set(bpy.data.objects)
+        bpy.ops.import_mesh.stl(filepath=filepath)
+        imported_objs = set(bpy.data.objects) - old_objs
+        return imported_objs.pop()
 
     # generates and array of elements of type "taglio"
-    def generator(self, args):
-        
-        arrayDiTagli = []
+    def generator(self, random, args):
 
-        for i in range(args["pop_size"]):
-            # add empty, cylinder, calculate randomly the parameters and create a "taglio"
-            distanceFromOrigin = random.uniform(0 , 2)
-            desiredAngle = random.uniform(0 , 180)
-            rotY = random.uniform( 0 , 360 )
-            rotZ = random.uniform( 0 , 360 )
-            rotEmptyX = random.uniform( 0 , 360 )
-            rotEmptyZ = random.uniform( 0 , 360 )
-            taglioToAppend = taglio(distanceFromOrigin, desiredAngle, rotY,rotZ, rotEmptyX,rotEmptyZ)
-            arrayDiTagli.append(taglioToAppend)
+        # add empty, cylinder, calculate randomly the parameters and create a "taglio"
+        distanceFromOrigin = random.uniform(0 , 2)
+        desiredAngle = random.uniform(0 , 180)
+        rotY = random.uniform( 0 , 360 )
+        rotZ = random.uniform( 0 , 360 )
+        rotEmptyX = random.uniform( 0 , 360 )
+        rotEmptyZ = random.uniform( 0 , 360 )
+        t = taglio(distanceFromOrigin, desiredAngle, rotY, rotZ, rotEmptyX, rotEmptyZ)
 
-        return arrayDiTagli
+        return t.tolist()
     
     # for every candidate, check the fitness
     # the fitness is the quantity of removed volume
@@ -269,19 +256,17 @@ class BlenderWedgeProblem:
             bpy.ops.mesh.primitive_cylinder_add()
             _cylinder = bpy.context.active_object
 
-            c.compute(_cylinder, _empty)
-            c.scale(_cylinder, scaleFactor)
-            c.applyTransform(_cylinder, _empty)
-
-            carvingMeshTemp = self.carvingMesh.copy()
-            targetMeshTemp = self.targetMesh.copy()
+            t = taglio(c[0], c[1], c[2], c[3], c[4], c[5])
+            t.compute(_cylinder, _empty)
+            t.scale(_cylinder, scaleFactor)
+            t.applyTransform(_cylinder, _empty)
 
             volume = 0
 
-            if verifyIntersect(targetMeshTemp, _cylinder, self.targetMesh) == True:
-                volume -= penaltyFactor * abs(volumeTargetMesh - c.computeVolume(targetMeshTemp, _cylinder, _empty))
+            if verifyIntersect(self.targetMesh, _cylinder) == True:
+                volume -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
 
-            volume += abs (volumeCarvingMesh - c.computeVolume(carvingMeshTemp, _cylinder, _empty))
+            volume += abs (volumeCarvingMesh - t.computeVolume(self.carvingMesh, _cylinder, _empty))
 
             fitness.append(volume)
 
@@ -290,15 +275,30 @@ class BlenderWedgeProblem:
 
         return fitness
 
-
-    def computeVolume(self, mesh):
+    def computeVolume(self, obj):
         # Get a BMesh representation
         bm = bmesh.new()   # create an empty BMesh
-        bm.from_mesh(mesh)   # fill it in from a Mesh
+        bm.from_object(obj, bpy.context.evaluated_depsgraph_get())
 
         volume = bm.calc_volume()
 
         bm.free()
         return volume # * 1000
+
+    # def custom_observer(self, population, num_generations, num_evaluations, args):
+    #     if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
+    #         final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
+    #         final_pop_candidates = np.asarray([guy.candidate for guy in population])
+            
+    #         sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
+    #         final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
+    #         final_pop_candidates = final_pop_candidates[sort_indexes]
+    #         # self.sliceAndApply(final_pop_candidates[-1])
+
+    #         print("\ngeneration: ", num_generations)
+    #         print("cut applyed: ", final_pop_candidates[-1])
+    #         print("fitness: ", final_pop_fitnesses[-1],"\n")
+    #         # print(final_pop_fitnesses)
+    #         self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
 
 

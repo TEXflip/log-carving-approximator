@@ -1,5 +1,6 @@
 from inspyred import ec, swarm
 from planeProblem import PlaneCutProblem
+from wedgeProblem import BlenderWedgeProblem
 import matplotlib.pylab as plt
 import numpy as np
 import os
@@ -42,7 +43,7 @@ args = {}
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 100
+args["max_generations"] = 40
 args["slice_application_generation"] = 20 # number of generations before appling the best slice
 args["pop_size"] = args["num_selected"] = 20 # population size
 args["num_offspring"] = 20
@@ -71,6 +72,7 @@ args["epsilon"] = 0.00001
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
     problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}
     
@@ -108,8 +110,9 @@ if __name__ == "__main__":
     plt.ioff()
     plt.show()
 
-    cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
-    problem.SaveCarvingMesh("finalModel.stl")
-    command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" ' + cuts_string
-    print(command)
-    os.system(command)
+    if isinstance(problem, PlaneCutProblem):
+        cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
+        problem.SaveCarvingMesh("finalModel.stl")
+        command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" ' + cuts_string
+        print(command)
+        os.system(command)
