@@ -1,4 +1,4 @@
-from inspyred import ec
+from inspyred import ec, swarm
 from planeProblem import PlaneCutProblem
 import matplotlib.pylab as plt
 import numpy as np
@@ -33,20 +33,40 @@ def getBestWrost(pop):
     
     return final_pop_candidates[0], final_pop_candidates[-1]
 
+### Choose the algorithm between EC and PSO
+algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
+ALGORITHM = algorithms_list["ec"]
+
 args = {}
+
+# --- Global Params
+
 args["initial_pop_storage"] = {}
 args["max_generations"] = 100
+args["slice_application_generation"] = 20 # number of generations before appling the best slice
+args["pop_size"] = args["num_selected"] = 20 # population size
+args["num_offspring"] = 20
+args["fig_title"] = 'ES'
+
+# --- Evolutionary Computation params ---
+
 args["num_elites"] = 1
 args["gaussian_stdev"] = 0.25
 args["crossover_rate"] = 0.2
 args["mutation_rate"] = 0.8
-args["slice_application_generation"] = 20 # number of generations before appling the best slice
-
-args["pop_size"] = args["num_selected"] = 20 # population size
-args["num_offspring"] = 20
 args["tournament_size"] = 3
 
-args["fig_title"] = 'ES'
+# --- Particle Swarm Optimization params ---
+
+args["inertia"] = 0.5
+args["cognitive_rate"] = 2.1
+args["social_rate"] = 2.1
+
+# --- Evolutionary Strategies params ---
+
+args["tau"] = None
+args["tau_prime"] = None
+args["epsilon"] = 0.00001
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
@@ -54,13 +74,21 @@ if __name__ == "__main__":
 
     initial_pop_storage = {}
     
-    algorithm = ec.EvolutionaryComputation(rng)
+    if ALGORITHM == algorithms_list["ec"]:
+        algorithm = ec.EvolutionaryComputation(rng)
+        algorithm.replacer = ec.replacers.generational_replacement
+        algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
+        algorithm.selector = ec.selectors.tournament_selection
+
+    elif ALGORITHM == algorithms_list["pso"]:
+        algorithm = swarm.PSO(rng)
+
+    # elif ALGORITHM == algorithms_list["es"]:
+    #     algorithm = ec.ES(rng)
+
     algorithm.terminator = ec.terminators.generation_termination
-    algorithm.replacer = ec.replacers.generational_replacement
-    algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
-    algorithm.selector = ec.selectors.tournament_selection
     algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer, problem.custom_observer]
-    # algorithm.bounder = ec.Bounder([-1,-1,-1,-1,-1,-1], [1,1,1,1,1,1])
+    # algorithm.bounder = ec.Bounder([-2,-2,-2,-2,-2,-2], [2,2,2,2,2,2])
 
     # Generates a random plane
     generator = problem.generator

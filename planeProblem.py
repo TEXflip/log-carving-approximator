@@ -165,6 +165,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
                 oldOrig[hashValue] = 0
                 normal = (np.array(normal) * -1)
                 candidate = np.concatenate((origin, normal), axis=0)
+                # candidate = origin.tolist() + normal.tolist()
                 self.cuts.append(candidate)
 
         self.rng.shuffle(self.cuts)
@@ -175,7 +176,6 @@ class PlaneCutProblem(BlenderPlaneProblem):
         return self.cuts[rndint]
         
     def evaluator(self, candidates, args):
-
         fitness = []
         for c in candidates:
             volume = self.sliceAndVolume(c)
@@ -185,7 +185,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
         return fitness
 
     def constraint(self, c):
-        relDist = self.minDistFromPlane(self.targetMesh, c[:3], c[3:])
+        relDist = self.minDistFromPlane(self.targetMesh, Vector(c[:3]), Vector(c[3:]))
         if relDist > 0:
             return 0
         else:
