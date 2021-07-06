@@ -245,9 +245,6 @@ class BlenderWedgeProblem:
     # for every candidate, check the fitness
     # the fitness is the quantity of removed volume
     def evaluator(self, candidates, args):
-        
-        volumeTargetMesh = self.computeVolume(self.targetMesh)
-        volumeCarvingMesh = self.computeVolume(self.carvingMesh)
 
         fitness = []
         for c in candidates:
@@ -264,9 +261,10 @@ class BlenderWedgeProblem:
             volume = 0
 
             if verifyIntersect(self.targetMesh, _cylinder) == True:
-                volume -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
+                # volume -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
+                volume -= self.initialVolume
 
-            volume += abs (volumeCarvingMesh - t.computeVolume(self.carvingMesh, _cylinder, _empty))
+            volume += abs(self.initialVolume - t.computeVolume(self.carvingMesh, _cylinder, _empty))
 
             fitness.append(volume)
 
@@ -285,6 +283,12 @@ class BlenderWedgeProblem:
         bm.free()
         return volume # * 1000
 
+    # save the resulting model
+    def SaveCarvingMesh(self, filepath):
+        bpy.ops.object.select_all(action='DESELECT')
+        self.carvingMesh.select_set(True)
+        bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
+
     # def custom_observer(self, population, num_generations, num_evaluations, args):
     #     if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
     #         final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
@@ -293,7 +297,7 @@ class BlenderWedgeProblem:
     #         sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
     #         final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
     #         final_pop_candidates = final_pop_candidates[sort_indexes]
-    #         # self.sliceAndApply(final_pop_candidates[-1])
+            # self.sliceAndApply(final_pop_candidates[-1])
 
     #         print("\ngeneration: ", num_generations)
     #         print("cut applyed: ", final_pop_candidates[-1])
