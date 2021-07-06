@@ -24,7 +24,7 @@ def reactivateLog(old):
     os.dup(old)
     os.close(old)
 
-def getBestWrost(pop):
+def getBestAndWrost(pop):
     final_pop_fitnesses = np.asarray([guy.fitness for guy in pop])
     final_pop_candidates = np.asarray([guy.candidate for guy in pop])
     
@@ -32,22 +32,24 @@ def getBestWrost(pop):
     final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
     final_pop_candidates = final_pop_candidates[sort_indexes]
     
-    return final_pop_candidates[0], final_pop_candidates[-1]
+    return final_pop_candidates[-1], final_pop_candidates[0]
 
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
 ALGORITHM = algorithms_list["ec"]
+REGENERATION = False
 
 args = {}
 
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 40
-args["slice_application_generation"] = 20 # number of generations before appling the best slice
-args["pop_size"] = args["num_selected"] = 20 # population size
-args["num_offspring"] = 20
-args["fig_title"] = 'ES'
+args["max_generations"] = 20
+args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
+args["pop_size"] = args["num_selected"] = 10 # population size
+args["num_offspring"] = 10
+args["num_evolutions"] = 20 # only if REGENERATION = True
+args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
 
@@ -59,9 +61,9 @@ args["tournament_size"] = 3
 
 # --- Particle Swarm Optimization params ---
 
-args["inertia"] = 0.5
-args["cognitive_rate"] = 2.1
-args["social_rate"] = 2.1
+args["inertia"] = 1
+args["cognitive_rate"] = 1.8
+args["social_rate"] = 2.
 
 # --- Evolutionary Strategies params ---
 
@@ -89,7 +91,9 @@ if __name__ == "__main__":
     #     algorithm = ec.ES(rng)
 
     algorithm.terminator = ec.terminators.generation_termination
-    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer, problem.custom_observer]
+    algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer]
+    if not REGENERATION:
+        algorithm.observer += [problem.custom_observer]
     # algorithm.bounder = ec.Bounder([-2,-2,-2,-2,-2,-2], [2,2,2,2,2,2])
 
     # Generates a random plane
@@ -98,7 +102,18 @@ if __name__ == "__main__":
 
     oldStdOut = supressLog()
 
-    final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+    if not REGENERATION:
+        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+    else:
+        args["num_evolution"] = 0
+        for i in range(args["num_evolutions"]):
+            args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
+            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+            b, w = getBestAndWrost(final_pop)
+            problem.sliceAndApply(b)
+            problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
+            args["num_evolution"] += 1
+            plt.close()
 
     reactivateLog(oldStdOut)
 
@@ -116,3 +131,5 @@ if __name__ == "__main__":
         command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" ' + cuts_string
         print(command)
         os.system(command)
+    else:
+        problem.SaveCarvingMesh("finalModel2.stl")
