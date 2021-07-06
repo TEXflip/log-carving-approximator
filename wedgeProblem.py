@@ -12,6 +12,7 @@ from mathutils.bvhtree import BVHTree
 
 scaleFactor = 10
 penaltyFactor = 10 # pensalty should depend on volume ratio between targetMesh and carvingMesh
+fastModifierThreshold = 2e-05
 
 
 
@@ -57,6 +58,8 @@ class taglio:
         # cut the cylinder in half like a cheese slice
         bpy.ops.object.modifier_add(type='BOOLEAN')
         bpy.context.object.modifiers["Boolean"].object = baseCube
+        bpy.context.object.modifiers["Boolean"].solver = 'FAST'
+        bpy.context.object.modifiers["Boolean"].double_threshold = fastModifierThreshold
         bpy.ops.object.modifier_apply(modifier="Boolean")
 
         # assign the parenting
@@ -71,6 +74,8 @@ class taglio:
         bpy.context.view_layer.objects.active = _cylinder
         bpy.ops.object.modifier_add(type='BOOLEAN')
         bpy.context.object.modifiers["Boolean"].object = baseCube
+        bpy.context.object.modifiers["Boolean"].solver = 'FAST'
+        bpy.context.object.modifiers["Boolean"].double_threshold = fastModifierThreshold
         bpy.ops.object.modifier_apply(modifier="Boolean")
 
         # rotate the wedge of half its angle to point it to the origin
@@ -289,20 +294,61 @@ class BlenderWedgeProblem:
         self.carvingMesh.select_set(True)
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
-    # def custom_observer(self, population, num_generations, num_evaluations, args):
-    #     if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
-    #         final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
-    #         final_pop_candidates = np.asarray([guy.candidate for guy in population])
+    
+    def sliceAndApply(self, t):
+
+        bpy.ops.object.empty_add()
+        _empty = bpy.context.active_object
+        bpy.ops.mesh.primitive_cylinder_add()
+        _cylinder = bpy.context.active_object
+
+        t.compute(_cylinder, _empty)
+        t.scale(_cylinder, scaleFactor)
+        t.applyTransform(_cylinder, _empty)
+
+
+
+        volume = t.computeVolume(self.carvingMesh, _cylinder, _empty)
+
+
+
+        # apply the modifiers
+        bool = self.carvingMesh.modifiers.new(type="BOOLEAN", name="bool")
+        bool.double_threshold = 0.000025
+        bool.object = taglio
+        bool.operation = 'DIFFERENCE'
+
+
+
+        bpy.context.view_layer.objects.active = self.cutSon
+
+        # taglio il cilindro a metà, come se fosse una forma di formaggio molto alta
+        bpy.ops.object.modifier_add(type='BOOLEAN')
+        bpy.context.object.modifiers["Boolean"].object = baseCube
+        bpy.ops.object.modifier_apply(modifier="Boolean")
+        
+        
+        self.carvingMesh.modifiers.remove(bool)
+
+
+        bpy.data.objects.remove(_cylinder, do_unlink=True)
+        bpy.data.objects.remove(_empty, do_unlink=True)
+
+        return volume
+
+    # apply the cut after "slice_application_evaluations" evaluations
+    def custom_observer(self, population, num_generations, num_evaluations, args):
+        if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
+            final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
+            final_pop_candidates = np.asarray([guy.candidate for guy in population])
             
-    #         sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
-    #         final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
-    #         final_pop_candidates = final_pop_candidates[sort_indexes]
-            # self.sliceAndApply(final_pop_candidates[-1])
+            sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
+            final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
+            final_pop_candidates = final_pop_candidates[sort_indexes]
+            self.sliceAndApply(final_pop_candidates[-1])
 
-    #         print("\ngeneration: ", num_generations)
-    #         print("cut applyed: ", final_pop_candidates[-1])
-    #         print("fitness: ", final_pop_fitnesses[-1],"\n")
-    #         # print(final_pop_fitnesses)
-    #         self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
-
-
+            print("\ngeneration: ", num_generations)
+            print("cut applyed: ", final_pop_candidates[-1])
+            print("fitness: ", final_pop_fitnesses[-1],"\n")
+            # print(final_pop_fitnesses)
+            self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
