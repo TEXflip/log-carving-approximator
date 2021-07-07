@@ -73,8 +73,8 @@ args["epsilon"] = 0.00001
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
-    problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}
     
@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
     algorithm.terminator = ec.terminators.generation_termination
     algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer]
+    
     if not REGENERATION:
         algorithm.observer += [problem.custom_observer]
     # algorithm.bounder = ec.Bounder([-2,-2,-2,-2,-2,-2], [2,2,2,2,2,2])
@@ -123,7 +124,9 @@ if __name__ == "__main__":
 
 
     plt.ioff()
+    
     plt.show()
+
 
     if isinstance(problem, PlaneCutProblem):
         cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
@@ -132,4 +135,7 @@ if __name__ == "__main__":
         print(command)
         os.system(command)
     else:
-        problem.SaveCarvingMesh("finalModel2.stl")
+        problem.SaveCarvingMesh("finalModel3.stl")
+        command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" '
+        print(command)
+        os.system(command)

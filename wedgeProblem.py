@@ -207,6 +207,10 @@ def is_inside(p, obj):
 class BlenderWedgeProblem:
     def __init__(self, targetMeshPath, carvingMeshPath, random):
         
+        
+        self.targetMeshPath = targetMeshPath
+        self.carvingMeshPath = carvingMeshPath
+        
         # reset the workspace
         objects = bpy.data.objects
         self.context = bpy.context
@@ -225,6 +229,8 @@ class BlenderWedgeProblem:
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
         self.maximize = True
+
+        self.bestCuts = np.empty((0,6), np.float32)
 
     # custom importing function correctly return the imported object
     def importStl(self, filepath):
@@ -295,12 +301,15 @@ class BlenderWedgeProblem:
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
     
-    def sliceAndApply(self, t):
+    def sliceAndApply(self, c):
 
         bpy.ops.object.empty_add()
         _empty = bpy.context.active_object
         bpy.ops.mesh.primitive_cylinder_add()
         _cylinder = bpy.context.active_object
+
+
+        t = taglio(c[0], c[1], c[2], c[3], c[4], c[5])
 
         t.compute(_cylinder, _empty)
         t.scale(_cylinder, scaleFactor)
@@ -311,24 +320,25 @@ class BlenderWedgeProblem:
         volume = t.computeVolume(self.carvingMesh, _cylinder, _empty)
 
 
+        """
 
         # apply the modifiers
         bool = self.carvingMesh.modifiers.new(type="BOOLEAN", name="bool")
         bool.double_threshold = 0.000025
-        bool.object = taglio
+        bool.object = self.carvingMesh
         bool.operation = 'DIFFERENCE'
 
+        self.carvingMesh.modifiers.remove(bool)
 
-
-        bpy.context.view_layer.objects.active = self.cutSon
-
-        # taglio il cilindro a metà, come se fosse una forma di formaggio molto alta
+        """
+        
+        bpy.context.view_layer.objects.active = self.carvingMesh
         bpy.ops.object.modifier_add(type='BOOLEAN')
-        bpy.context.object.modifiers["Boolean"].object = baseCube
+        bpy.context.object.modifiers["Boolean"].object = _cylinder
+        bpy.context.object.modifiers["Boolean"].solver = 'FAST'
+        bpy.context.object.modifiers["Boolean"].double_threshold = fastModifierThreshold
         bpy.ops.object.modifier_apply(modifier="Boolean")
         
-        
-        self.carvingMesh.modifiers.remove(bool)
 
 
         bpy.data.objects.remove(_cylinder, do_unlink=True)
@@ -352,3 +362,8 @@ class BlenderWedgeProblem:
             print("fitness: ", final_pop_fitnesses[-1],"\n")
             # print(final_pop_fitnesses)
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
+
+    def SaveCarvingMesh(self, filepath):
+        bpy.ops.object.select_all(action='DESELECT')
+        self.carvingMesh.select_set(True)
+        bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
