@@ -210,7 +210,7 @@ class BlenderWedgeProblem:
         
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
-        
+
         # reset the workspace
         objects = bpy.data.objects
         self.context = bpy.context
@@ -363,7 +363,9 @@ class BlenderWedgeProblem:
             # print(final_pop_fitnesses)
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
 
-    def SaveCarvingMesh(self, filepath):
+    def SaveCarvingMesh(self, filepath, mesh):
         bpy.ops.object.select_all(action='DESELECT')
-        self.carvingMesh.select_set(True)
+        # self.carvingMesh.select_set(True)
+
+        bpy.context.view_layer.objects.active = mesh
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)

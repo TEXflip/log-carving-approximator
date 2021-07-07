@@ -1,6 +1,6 @@
 from inspyred import ec, swarm
 from planeProblem import PlaneCutProblem
-from wedgeProblem import BlenderWedgeProblem
+from wedgeProblem import BlenderWedgeProblem, taglio
 import matplotlib.pylab as plt
 import numpy as np
 import os
@@ -24,7 +24,7 @@ def reactivateLog(old):
     os.dup(old)
     os.close(old)
 
-def getBestAndWrost(pop):
+def getBestAndWorst(pop):
     final_pop_fitnesses = np.asarray([guy.fitness for guy in pop])
     final_pop_candidates = np.asarray([guy.candidate for guy in pop])
     
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         for i in range(args["num_evolutions"]):
             args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
             final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
-            b, w = getBestAndWrost(final_pop)
+            b, w = getBestAndWorst(final_pop)
             problem.sliceAndApply(b)
             problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
             args["num_evolution"] += 1
@@ -135,7 +135,10 @@ if __name__ == "__main__":
         print(command)
         os.system(command)
     else:
-        problem.SaveCarvingMesh("finalModel3.stl")
+        # c = problem.bestCuts
+        # mesh = taglio(c[0], c[1], c[2], c[3], c[4], c[5])
+        # t = taglio(c[0][0], c[0][1], c[0][2], c[0][3], c[0][4], c[0][5])
+        problem.SaveCarvingMesh("finalModel3.stl", problem.carvingMesh)
         command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" '
         print(command)
         os.system(command)
