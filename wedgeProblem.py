@@ -207,7 +207,6 @@ def is_inside(p, obj):
 class BlenderWedgeProblem:
     def __init__(self, targetMeshPath, carvingMeshPath, random):
         
-        
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
 
@@ -269,15 +268,17 @@ class BlenderWedgeProblem:
             t.scale(_cylinder, scaleFactor)
             t.applyTransform(_cylinder, _empty)
 
-            volume = 0
+
+            volume = t.computeVolume(self.carvingMesh, _cylinder, _empty)
+            print(volume)
+            candidateFitness = abs(self.initialVolume - volume)
+            candidateFitness -= self.initialVolume if volume == 0 else 0
 
             if verifyIntersect(self.targetMesh, _cylinder) == True:
-                # volume -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
-                volume -= self.initialVolume
+                # candidateFitness -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
+                candidateFitness -= self.initialVolume
 
-            volume += abs(self.initialVolume - t.computeVolume(self.carvingMesh, _cylinder, _empty))
-
-            fitness.append(volume)
+            fitness.append(candidateFitness)
 
         bpy.data.objects.remove(_cylinder, do_unlink=True)
         bpy.data.objects.remove(_empty, do_unlink=True)
@@ -357,9 +358,9 @@ class BlenderWedgeProblem:
             final_pop_candidates = final_pop_candidates[sort_indexes]
             self.sliceAndApply(final_pop_candidates[-1])
 
-            print("\ngeneration: ", num_generations)
-            print("cut applyed: ", final_pop_candidates[-1])
-            print("fitness: ", final_pop_fitnesses[-1],"\n")
+            # print("\ngeneration: ", num_generations)
+            # print("cut applyed: ", final_pop_candidates[-1])
+            # print("fitness: ", final_pop_fitnesses[-1],"\n")
             # print(final_pop_fitnesses)
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
 

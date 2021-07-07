@@ -5,10 +5,12 @@ import trimesh
 import numpy as np
 
 class BlenderPlaneProblem:
-    def __init__(self, targetMeshPath, carvingMeshPath):
+    def __init__(self, targetMeshPath, carvingMeshPath, fastMode = True):
         # reset the workspace
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
+        self.fastBooleanTH = 1e-10
+        self.fastBoolean = fastMode
         objects = bpy.data.objects
         self.context = bpy.context
         if bpy.context.mode != 'OBJECT':
@@ -79,7 +81,9 @@ class BlenderPlaneProblem:
 
         # create boolean modifier on the carving mesh and apply cube boolean intersection
         bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
-        bool.double_threshold = 0.000025
+        if self.fastBoolean:
+            bool.solver = 'FAST'
+            bool.double_threshold = self.fastBooleanTH
         bool.object = newcube
         bool.operation = 'INTERSECT'
 
@@ -140,8 +144,8 @@ class BlenderPlaneProblem:
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
 class PlaneCutProblem(BlenderPlaneProblem):
-    def __init__(self, targetMeshPath, carvingMeshPath, rng):
-        super(PlaneCutProblem, self).__init__(targetMeshPath, carvingMeshPath)
+    def __init__(self, targetMeshPath, carvingMeshPath, rng, fastMode = True):
+        super(PlaneCutProblem, self).__init__(targetMeshPath, carvingMeshPath, fastMode=fastMode)
         self.rng = rng
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
@@ -180,6 +184,8 @@ class PlaneCutProblem(BlenderPlaneProblem):
         for c in candidates:
             volume = self.sliceAndVolume(c)
             candidateFitness = (self.initialVolume - volume) - self.constraint(c)
+            if self.fastBoolean: # way to prevent vanishing boolean application
+                candidateFitness -= self.initialVolume if volume == 0 else 0
             fitness.append(candidateFitness)
 
         return fitness

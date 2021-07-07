@@ -1,6 +1,7 @@
 from inspyred import ec, swarm
 from planeProblem import PlaneCutProblem
 from wedgeProblem import BlenderWedgeProblem, taglio
+from wedgeProblem2 import BlenderWedgeProblem2
 import matplotlib.pylab as plt
 import numpy as np
 import os
@@ -8,7 +9,8 @@ import sys
 import plot_utils
 from inspyred_utils import NumpyRandomWrapper
 import time
-
+# TODO: risolvere modello che scompare usando penalty
+# TODO: generare cunei fine esecuzione
 def supressLog():
     # redirect log output to a file
     logfile = 'blender_evolution.log'
@@ -44,11 +46,11 @@ args = {}
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 20
-args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
+args["max_generations"] = 100
+args["slice_application_generation"] = 10 # number of generations before appling the best slice, only if REGENERATION = False
 args["pop_size"] = args["num_selected"] = 10 # population size
 args["num_offspring"] = 10
-args["num_evolutions"] = 20 # only if REGENERATION = True
+args["num_evolutions"] = 5 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
@@ -74,7 +76,8 @@ args["epsilon"] = 0.00001
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
     # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    problem = BlenderWedgeProblem2('3D models/diamond.stl', '3D models/cylinder.stl', rng)
 
     initial_pop_storage = {}
     
@@ -101,7 +104,7 @@ if __name__ == "__main__":
     generator = problem.generator
     evaluator = problem.evaluator
 
-    oldStdOut = supressLog()
+    # oldStdOut = supressLog()
 
     if not REGENERATION:
         final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
@@ -116,7 +119,7 @@ if __name__ == "__main__":
             args["num_evolution"] += 1
             plt.close()
 
-    reactivateLog(oldStdOut)
+    # reactivateLog(oldStdOut)
 
     # for i, c in enumerate(final_pop):
     #     print(str(i)+') ', c)
@@ -124,21 +127,16 @@ if __name__ == "__main__":
 
 
     plt.ioff()
-    
     plt.show()
 
-
+    cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
     if isinstance(problem, PlaneCutProblem):
-        cuts_string = '"' + ';'.join(','.join('%0.7f' %x for x in y) for y in problem.bestCuts) + '"'
         problem.SaveCarvingMesh("finalModel.stl")
-        command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" ' + cuts_string
-        print(command)
+        command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" plane ' + cuts_string
+        # print(command)
         os.system(command)
     else:
-        # c = problem.bestCuts
-        # mesh = taglio(c[0], c[1], c[2], c[3], c[4], c[5])
-        # t = taglio(c[0][0], c[0][1], c[0][2], c[0][3], c[0][4], c[0][5])
         problem.SaveCarvingMesh("finalModel3.stl", problem.carvingMesh)
-        command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" '
-        print(command)
+        command = 'blender -P templates/stlImporter.py -- "finalModel3.stl" "' + problem.targetMeshPath + '" wedge ' + cuts_string
+        # print(command)
         os.system(command)
