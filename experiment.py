@@ -83,4 +83,4 @@ def runMultiExperiments(file_params):
     f.write(out)
     f.close()
 
-runMultiExperiments("experiments/exp1.json")
+runMultiExperiments("experiments/std_dev0.60.json")
