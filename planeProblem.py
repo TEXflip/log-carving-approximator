@@ -18,6 +18,7 @@ class BlenderPlaneProblem:
             bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=True)
+        bpy.ops.outliner.orphans_purge()
 
         # import cylinder
         self.carvingMesh = self.importStl(carvingMeshPath)
@@ -141,6 +142,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
         self.maximize = True
         self.bounder = Bounder([-2,-2,-2,-1,-1,-1], [2,2,2,1,1,1])
         self.bestCuts = np.empty((0,6), np.float32)
+        self.bestFit = []
 
         target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
         oldOrig = {}
@@ -175,6 +177,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
             if self.fastBoolean: # way to prevent vanishing boolean application
                 candidateFitness -= self.initialVolume if volume == 0 else 0
             fitness.append(candidateFitness)
+        # print(fitness)
 
         return fitness
 
@@ -197,3 +200,4 @@ class PlaneCutProblem(BlenderPlaneProblem):
             self.sliceAndApply(final_pop_candidates[-1])
 
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
+            self.bestFit.append(final_pop_fitnesses[-1])

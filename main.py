@@ -18,8 +18,6 @@ def getBestAndWorst(pop):
     
     return final_pop_candidates[-1], final_pop_candidates[0]
 
-
-
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
 ALGORITHM = algorithms_list["ec"]
@@ -34,7 +32,7 @@ args["max_generations"] = 20
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
 args["pop_size"] = args["num_selected"] = 20 # population size
 args["num_offspring"] = 20
-args["num_evolutions"] = 10 # only if REGENERATION = True
+args["num_evolutions"] = 1 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
@@ -64,8 +62,6 @@ if __name__ == "__main__":
     # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem2('3D models/diamond.stl', '3D models/cylinder.stl', rng, fastBoolean=False)
 
-    initial_pop_storage = {}
-    
     if ALGORITHM == algorithms_list["ec"]:
         algorithm = ec.EvolutionaryComputation(rng)
         algorithm.replacer = ec.replacers.generational_replacement
@@ -104,8 +100,8 @@ if __name__ == "__main__":
             args["num_evolution"] += 1
             plt.close()
 
-    # for i, c in enumerate(final_pop):
-    #     print(str(i)+') ', c)
+    for i, c in enumerate(final_pop):
+        print(str(i)+') ', c)
     print("selected cuts: ", problem.bestCuts)
 
 

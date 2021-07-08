@@ -146,6 +146,7 @@ class BlenderWedgeProblem2:
             bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=True)
+        bpy.ops.outliner.orphans_purge()
         
         # import cylinder
         self.carvingMesh = self.importStl(carvingMeshPath)
@@ -159,6 +160,7 @@ class BlenderWedgeProblem2:
         self.maximize = True
 
         self.bestCuts = np.empty((0,7), np.float32)
+        self.bestFit = []
 
         target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
         oldOrig = {}
@@ -275,6 +277,7 @@ class BlenderWedgeProblem2:
             self.sliceAndApply(final_pop_candidates[-1])
 
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
+            self.bestFit.append(final_pop_fitnesses[-1])
 
     def SaveCarvingMesh(self, filepath, mesh):
         bpy.ops.object.select_all(action='DESELECT')

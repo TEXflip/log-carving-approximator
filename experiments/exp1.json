@@ -1,0 +1,21 @@
+{
+    "runs": 2,
+    "problemType": "plane",
+    "carvingMeshFilepath":"3D models/cylinder.stl",
+    "targetMeshFilepath":"3D models/diamond.stl",
+    "algorithm":"ec",
+    "regeneration":true,
+    "seeds": [42,1,2,3,4,5,6,7,8,9],
+    "args":{
+        "max_generations": 20,
+        "num_selected": 20,
+        "pop_size": 20,
+        "num_offspring": 20,
+        "num_evolutions": 10,
+        "num_elites": 1,
+        "gaussian_stdev": 0.25,
+        "crossover_rate": 0.2,
+        "mutation_rate": 0.8,
+        "tournament_size": 3
+    }
+}
