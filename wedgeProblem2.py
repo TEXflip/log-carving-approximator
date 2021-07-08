@@ -6,19 +6,22 @@ import math
 from mathutils import Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 import trimesh
+from inspyred.ec import Bounder 
+import copy
 
 
 # script created by modifying "problem.py" with the text from "cut.py"
 
-fastModifierThreshold = 2e-05
+fastModifierThreshold = 1e-07
 
 class taglio:
-    def __init__(self, origin, rotation, angle):
+    def __init__(self, origin, rotation, angle, fastBoolean = True):
         self.origin = origin
         self.rotation = rotation
         self.angle = angle
         self.toRad = math.pi/180
         self.scale = 10
+        self.fastBoolean = fastBoolean
 
     def compute(self):
         angleRad = self.angle * self.toRad * 0.5
@@ -48,7 +51,9 @@ class taglio:
     def cutAndVolume(self, meshToCarve, wedge):
         # apply the modifiers
         bool = meshToCarve.modifiers.new(type="BOOLEAN", name="bool")
-        # bool.double_threshold = 0.000025
+        if self.fastBoolean:
+            bool.solver = 'FAST'
+            bool.double_threshold = fastModifierThreshold
         bool.object = wedge
         bool.operation = 'DIFFERENCE'
         
@@ -127,10 +132,12 @@ def verifyIntersect(obj1, obj2):
 
 
 class BlenderWedgeProblem2:
-    def __init__(self, targetMeshPath, carvingMeshPath, random):
+    def __init__(self, targetMeshPath, carvingMeshPath, random, fastBoolean = True):
         
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
+        self.fastBoolean = fastBoolean
+        self.bounder = Bounder([-2,-2,-2,-90,-90,-90, 5], [2,2,2,90,90,90, 180])
 
         # reset the workspace
         objects = bpy.data.objects
@@ -159,7 +166,7 @@ class BlenderWedgeProblem2:
 
         for i, normal in enumerate(target_trimesh.face_normals):
             face = target_trimesh.faces[i]
-            origin = target_trimesh.vertices[face[0]] * 1.1
+            origin = target_trimesh.vertices[face[0]]
 
             intOrig = (origin*1000).astype(np.int32)
             # origin = origin
@@ -186,20 +193,21 @@ class BlenderWedgeProblem2:
     def generator(self, random, args):
         rndint = random.randint(0, len(self.cuts))
         return self.cuts[rndint]
-    
+
     # for every candidate, check the fitness
     # the fitness is the quantity of removed volume
     def evaluator(self, candidates, args):
 
         fitness = []
         for i,c in enumerate(candidates):
-            t = taglio(c[0:3], c[3:6], c[6])
+            t = taglio(c[0:3], c[3:6], c[6], self.fastBoolean)
             wedge = t.compute()
 
             volume = t.cutAndVolume(self.carvingMesh, wedge)
 
             candidateFitness = self.initialVolume - volume
-            candidateFitness -= self.initialVolume if volume <= 0 else 0
+            if self.fastBoolean:
+                candidateFitness -= self.initialVolume if volume <= 0 else 0
 
             if verifyIntersect(self.targetMesh, wedge):
                 # candidateFitness -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
@@ -237,6 +245,23 @@ class BlenderWedgeProblem2:
         bool.object = wedge
         bool.operation = 'DIFFERENCE'
         bpy.ops.object.modifier_apply(modifier=bool.name)
+
+    def custom_gaussian_mutation(self, random, candidates, args):
+        def mutate(random, candidate, args):
+            mut_rate = args.setdefault('mutation_rate', 0.1)
+            mean = args.setdefault('gaussian_mean', 0.0)
+            stdev = args.setdefault('custom_gaussian_stdev', [0.25,0.25,0.25,10,10,10,10])
+            bounder = args['_ec'].bounder
+            mutant = copy.copy(candidate)
+            for i, m in enumerate(mutant):
+                if random.random() < mut_rate:
+                    mutant[i] += random.gauss(mean, stdev[i])
+            mutant = bounder(mutant, args)
+            return mutant
+        mutants = []
+        for i, cs in enumerate(candidates):
+            mutants.append(mutate(random, cs, args))
+        return mutants
 
     # apply the cut after "slice_application_evaluations" evaluations
     def custom_observer(self, population, num_generations, num_evaluations, args):

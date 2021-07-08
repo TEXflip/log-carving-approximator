@@ -3,6 +3,7 @@ import bmesh
 from mathutils import Vector, Quaternion
 import trimesh
 import numpy as np
+from inspyred.ec import Bounder
 
 class BlenderPlaneProblem:
     def __init__(self, targetMeshPath, carvingMeshPath, fastMode = True):
@@ -11,16 +12,12 @@ class BlenderPlaneProblem:
         self.carvingMeshPath = carvingMeshPath
         self.fastBooleanTH = 1e-10
         self.fastBoolean = fastMode
-        objects = bpy.data.objects
-        self.context = bpy.context
+        self.scale = 20
+
         if bpy.context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=True)
-
-        # create base cube for the boolean operation
-        bpy.ops.mesh.primitive_cube_add(location=(0, 0, 250), size=500, rotation=(0.0, 0.0, 0.0), enter_editmode=False)
-        self.cube = objects["Cube"]
 
         # import cylinder
         self.carvingMesh = self.importStl(carvingMeshPath)
@@ -35,13 +32,6 @@ class BlenderPlaneProblem:
         imported_objs = set(bpy.data.objects) - old_objs
         return imported_objs.pop()
 
-    def updateCarvingMesh(self, carvingMeshPath):
-        bpy.ops.object.select_all(action='DESELECT')
-        self.carvingMesh.select_set(True)
-        bpy.ops.object.delete()
-        # import new carvingMesh
-        self.carvingMesh = self.importStl(carvingMeshPath)
-
     def computeVolume(self, obj):
         # Get a BMesh representation
         bm = bmesh.new()   # create an empty BMesh
@@ -55,10 +45,10 @@ class BlenderPlaneProblem:
     # from normal to euler rotation coordinates
     def vecRotation(self, v2):
         # v1.normalize()
-        v1 = Vector((0,0,1))
+        v1 = Vector((0,0,-1))
         v2.normalize()
         if v1 == -v2:
-            v1.orthogonal().normalize()
+            v1 = Vector((0,1,0))
             return Quaternion((0, v1[0], v1[1], v1[2])).to_euler()
         half = (v1+v2).normalized()
         cross = v1.cross(half)
@@ -67,27 +57,31 @@ class BlenderPlaneProblem:
     # generate the boolean modifier that slices the model 
     # according to an orgin and a normal
     def slice(self, mesh, origin, normal):
-
-        # copy the cube
-        newcube = self.cube.copy()
-        empty = bpy.data.objects.new("empty", None)
-
-        # create empty to rotate the cube
-        bpy.data.collections["Collection"].objects.link(empty)
-        bpy.data.collections["Collection"].objects.link(newcube)
-        newcube.parent = empty
-        empty.location = origin
-        empty.rotation_euler = self.vecRotation(Vector(normal))
+        vertices = [(-1,-1,0), (1,-1,0), (1,1,0), (-1,1,0),  # lower face vertices
+                    (-1,-1,1), (1,-1,1), (1,1,1), (-1,1,1)]     # upper face vertices
+        edges = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
+        faces = [(3,2,1,0), (7,4,5,6), (3,0,4,7), (2,3,7,6), (1,2,6,5), (0,1,5,4)]
+        
+        new_mesh = bpy.data.meshes.new('cube')
+        new_mesh.from_pydata(vertices, edges, faces)
+        new_mesh.update()
+        
+        cube = bpy.data.objects.new('cube', new_mesh)
+        bpy.data.collections["Collection"].objects.link(cube)
+        
+        cube.scale = (self.scale, self.scale, self.scale)
+        cube.rotation_euler = self.vecRotation(Vector(normal))
+        cube.location = origin
 
         # create boolean modifier on the carving mesh and apply cube boolean intersection
         bool = mesh.modifiers.new(type="BOOLEAN", name="bool")
         if self.fastBoolean:
             bool.solver = 'FAST'
             bool.double_threshold = self.fastBooleanTH
-        bool.object = newcube
-        bool.operation = 'INTERSECT'
+        bool.object = cube
+        bool.operation = 'DIFFERENCE'
 
-        return bool, newcube
+        return bool
     
     # compute the minimum relative distance respect to the normal of the plane
     # and all the points of the mesh
@@ -104,23 +98,20 @@ class BlenderPlaneProblem:
     # Make a slice and compute the volume
     def sliceAndVolume(self, slice):
         # apply slice
-        bool, newcube = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         #compute volume
         volume = self.computeVolume(self.carvingMesh)
 
         # remove the copies
         self.carvingMesh.modifiers.remove(bool)
-        bpy.ops.object.select_all(action='DESELECT')
-        newcube.select_set(True)
-        bpy.data.objects["empty"].select_set(True)
-        bpy.ops.object.delete()
+        bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
 
         return volume
 
     def sliceAndApply(self, slice):
         # apply slice
-        bool, newcube = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         # apply boolean modifier
         bpy.context.view_layer.objects.active = self.carvingMesh
@@ -130,10 +121,7 @@ class BlenderPlaneProblem:
         volume = self.computeVolume(self.carvingMesh)
 
         # remove the empty
-        bpy.ops.object.select_all(action='DESELECT')
-        newcube.select_set(True)
-        bpy.data.objects["empty"].select_set(True)
-        bpy.ops.object.delete()
+        bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
 
         return volume
     
@@ -151,8 +139,8 @@ class PlaneCutProblem(BlenderPlaneProblem):
         self.initialVolume = self.computeVolume(self.carvingMesh)
         print("carving Mesh initial Volume: ", self.initialVolume)
         self.maximize = True
+        self.bounder = Bounder([-2,-2,-2,-1,-1,-1], [2,2,2,1,1,1])
         self.bestCuts = np.empty((0,6), np.float32)
-
 
         target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
         oldOrig = {}
@@ -160,14 +148,14 @@ class PlaneCutProblem(BlenderPlaneProblem):
 
         for i, normal in enumerate(target_trimesh.face_normals):
             face = target_trimesh.faces[i]
-            origin = target_trimesh.vertices[face[0]]
+            origin = target_trimesh.vertices[face[0]] * 1.1
 
             intOrig = (origin*1000).astype(np.int32)
             # origin = origin
             hashValue = hash(intOrig)
             if not (hashValue in oldOrig):
                 oldOrig[hashValue] = 0
-                normal = (np.array(normal) * -1)
+                normal = -origin/np.linalg.norm(origin)
                 candidate = np.concatenate((origin, normal), axis=0)
                 # candidate = origin.tolist() + normal.tolist()
                 self.cuts.append(candidate)
@@ -195,7 +183,6 @@ class PlaneCutProblem(BlenderPlaneProblem):
         if relDist > 0:
             return 0
         else:
-            # return -relDist * 100 + 10
             return self.initialVolume
 
     # apply the cut after "slice_application_evaluations" evaluations
@@ -209,8 +196,4 @@ class PlaneCutProblem(BlenderPlaneProblem):
             final_pop_candidates = final_pop_candidates[sort_indexes]
             self.sliceAndApply(final_pop_candidates[-1])
 
-            print("\ngeneration: ", num_generations)
-            print("cut applyed: ", final_pop_candidates[-1])
-            print("fitness: ", final_pop_fitnesses[-1],"\n")
-            # print(final_pop_fitnesses)
             self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
