@@ -15,7 +15,8 @@ def vecRotation(v2):
     return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
 
 def generateWedge(origin, rotation, angle):
-    angleRad = angle * math.pi/360
+    scale = 15
+    angleRad = angle * (math.pi/180) * 0.5
     vx = math.sin(angleRad)
     vy = math.cos(angleRad)
     v3y = 1 if angle > 90 else vy
@@ -32,7 +33,7 @@ def generateWedge(origin, rotation, angle):
     wedge = bpy.data.objects.new('wedge', new_mesh)
     bpy.data.collections["Collection"].objects.link(wedge)
     
-    wedge.scale = (10, 10, 10)
+    wedge.scale = (scale, scale*5, scale)
     wedge.rotation_euler = rotation
     wedge.location = origin
 

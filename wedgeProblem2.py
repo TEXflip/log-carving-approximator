@@ -1,18 +1,16 @@
 import bpy
 import bmesh
-import numpy as np
-import random
-import math
 from mathutils import Quaternion, Vector
 from mathutils.bvhtree import BVHTree
-import trimesh
+import numpy as np
+import math
 from inspyred.ec import Bounder 
 import copy
 
 
 # script created by modifying "problem.py" with the text from "cut.py"
 
-fastModifierThreshold = 1e-07
+fastModifierThreshold = 1e-10
 
 class taglio:
     def __init__(self, origin, rotation, angle, fastBoolean = True):
@@ -20,7 +18,7 @@ class taglio:
         self.rotation = rotation
         self.angle = angle
         self.toRad = math.pi/180
-        self.scale = 10
+        self.scale = 15
         self.fastBoolean = fastBoolean
 
     def compute(self):
@@ -41,7 +39,7 @@ class taglio:
         wedge = bpy.data.objects.new('wedge', new_mesh)
         bpy.data.collections["Collection"].objects.link(wedge)
         
-        wedge.scale = (self.scale, self.scale, self.scale)
+        wedge.scale = (self.scale, self.scale*5, self.scale)
         wedge.rotation_euler = self.rotation
         wedge.location = self.origin
 
@@ -162,25 +160,14 @@ class BlenderWedgeProblem2:
         self.bestCuts = np.empty((0,7), np.float32)
         self.bestFit = []
 
-        target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
-        oldOrig = {}
+        # prepare a list of initial cuts for the generator
         self.cuts = []
-
-        for i, normal in enumerate(target_trimesh.face_normals):
-            face = target_trimesh.faces[i]
-            origin = target_trimesh.vertices[face[0]]
-
-            intOrig = (origin*1000).astype(np.int32)
-            # origin = origin
-            hashValue = hash(intOrig)
-            if not (hashValue in oldOrig):
-                oldOrig[hashValue] = 0
-                normal = (np.array(normal) * -1)
-                rotation = self.vecRotation(Vector(normal))
-                angle = random.uniform(0, 180)
-                candidate = np.concatenate((origin, rotation, [angle]), axis=0)
-                # candidate = origin.tolist() + normal.tolist()
-                self.cuts.append(candidate)
+        for v in self.targetMesh.data.vertices:
+            origin = self.targetMesh.matrix_world @ v.co
+            normal = -origin/np.linalg.norm(origin)
+            rotation = self.vecRotation(normal)
+            candidate = np.concatenate((origin, rotation, [180]), axis=0)
+            self.cuts.append(candidate)
 
         self.random.shuffle(self.cuts)
 
@@ -193,7 +180,7 @@ class BlenderWedgeProblem2:
 
     # generates and array of elements of type "taglio"
     def generator(self, random, args):
-        rndint = random.randint(0, len(self.cuts))
+        rndint = random.randint(0, len(self.cuts)-1)
         return self.cuts[rndint]
 
     # for every candidate, check the fitness
@@ -229,7 +216,10 @@ class BlenderWedgeProblem2:
         volume = bm.calc_volume()
 
         bm.free()
-        return volume # * 1000
+        return volume
+
+    def is_feasible(self, fitness):
+        return fitness > 0 and fitness < self.initialVolume
 
     # save the resulting model
     def SaveCarvingMesh(self, filepath):
@@ -237,28 +227,29 @@ class BlenderWedgeProblem2:
         self.carvingMesh.select_set(True)
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
-    
     def sliceAndApply(self, c):
         t = taglio(c[0:3], c[3:6], c[6])
         wedge = t.compute()
 
         bpy.context.view_layer.objects.active = self.carvingMesh
         bool = self.carvingMesh.modifiers.new(type="BOOLEAN", name="bool")
+        if self.fastBoolean:
+            bool.solver = 'FAST'
+            bool.double_threshold = fastModifierThreshold
         bool.object = wedge
         bool.operation = 'DIFFERENCE'
         bpy.ops.object.modifier_apply(modifier=bool.name)
 
     def custom_gaussian_mutation(self, random, candidates, args):
         def mutate(random, candidate, args):
-            mut_rate = args.setdefault('mutation_rate', 0.1)
+            mut_rate = args.setdefault('mutation_rate', 1.0)
             mean = args.setdefault('gaussian_mean', 0.0)
             stdev = args.setdefault('custom_gaussian_stdev', [0.25,0.25,0.25,10,10,10,10])
-            bounder = args['_ec'].bounder
             mutant = copy.copy(candidate)
             for i, m in enumerate(mutant):
                 if random.random() < mut_rate:
                     mutant[i] += random.gauss(mean, stdev[i])
-            mutant = bounder(mutant, args)
+            mutant = self.bounder(mutant, args)
             return mutant
         mutants = []
         for i, cs in enumerate(candidates):
@@ -274,10 +265,14 @@ class BlenderWedgeProblem2:
             sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
             final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
             final_pop_candidates = final_pop_candidates[sort_indexes]
-            self.sliceAndApply(final_pop_candidates[-1])
 
-            self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
-            self.bestFit.append(final_pop_fitnesses[-1])
+            bestCand = final_pop_candidates[-1]
+            bestFit = final_pop_fitnesses[-1]
+
+            if self.is_feasible(bestFit):
+                self.sliceAndApply(bestCand)
+                self.bestCuts = np.append(self.bestCuts, np.array([bestCand]), axis=0)
+                self.bestFit.append(bestFit)
 
     def SaveCarvingMesh(self, filepath, mesh):
         bpy.ops.object.select_all(action='DESELECT')
@@ -290,7 +285,7 @@ class BlenderWedgeProblem2:
         v1 = Vector((0,-1,0))
         v2.normalize()
         if v1 == -v2:
-            v1.orthogonal().normalize()
+            v1 = Vector((0,0,1))
             return Quaternion((0, v1[0], v1[1], v1[2])).to_euler()
         half = (v1+v2).normalized()
         cross = v1.cross(half)

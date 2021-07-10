@@ -1,7 +1,6 @@
 import bpy
 import bmesh
 from mathutils import Vector, Quaternion
-import trimesh
 import numpy as np
 from inspyred.ec import Bounder
 
@@ -86,7 +85,7 @@ class BlenderPlaneProblem:
     
     # compute the minimum relative distance respect to the normal of the plane
     # and all the points of the mesh
-    def minDistFromPlane(self, obj, origin, normal):
+    def intersect(self, obj, origin, normal):
         vxs = obj.data.vertices
         min = float('inf')
         for v in vxs:
@@ -133,9 +132,9 @@ class BlenderPlaneProblem:
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
 
 class PlaneCutProblem(BlenderPlaneProblem):
-    def __init__(self, targetMeshPath, carvingMeshPath, rng, fastMode = True):
+    def __init__(self, targetMeshPath, carvingMeshPath, random, fastMode = True):
         super(PlaneCutProblem, self).__init__(targetMeshPath, carvingMeshPath, fastMode=fastMode)
-        self.rng = rng
+        self.random = random
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
         print("carving Mesh initial Volume: ", self.initialVolume)
@@ -144,25 +143,15 @@ class PlaneCutProblem(BlenderPlaneProblem):
         self.bestCuts = np.empty((0,6), np.float32)
         self.bestFit = []
 
-        target_trimesh = trimesh.load(targetMeshPath, force='mesh') # readonly the vertexes
-        oldOrig = {}
+        # prepare a list of initial cuts for the generator
         self.cuts = []
+        for v in self.targetMesh.data.vertices:
+            origin = self.targetMesh.matrix_world @ v.co
+            normal = -origin/np.linalg.norm(origin)
+            candidate = np.concatenate((origin, normal), axis=0)
+            self.cuts.append(candidate)
 
-        for i, normal in enumerate(target_trimesh.face_normals):
-            face = target_trimesh.faces[i]
-            origin = target_trimesh.vertices[face[0]] * 1.1
-
-            intOrig = (origin*1000).astype(np.int32)
-            # origin = origin
-            hashValue = hash(intOrig)
-            if not (hashValue in oldOrig):
-                oldOrig[hashValue] = 0
-                normal = -origin/np.linalg.norm(origin)
-                candidate = np.concatenate((origin, normal), axis=0)
-                # candidate = origin.tolist() + normal.tolist()
-                self.cuts.append(candidate)
-
-        self.rng.shuffle(self.cuts)
+        self.random.shuffle(self.cuts)
     
     def generator(self, random, args):
         # piani di taglio
@@ -173,7 +162,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
         fitness = []
         for c in candidates:
             volume = self.sliceAndVolume(c)
-            candidateFitness = (self.initialVolume - volume) - self.constraint(c)
+            candidateFitness = (self.initialVolume - volume) - self.penalty(c)
             if self.fastBoolean: # way to prevent vanishing boolean application
                 candidateFitness -= self.initialVolume if volume == 0 else 0
             fitness.append(candidateFitness)
@@ -181,14 +170,17 @@ class PlaneCutProblem(BlenderPlaneProblem):
 
         return fitness
 
-    def constraint(self, c):
-        relDist = self.minDistFromPlane(self.targetMesh, Vector(c[:3]), Vector(c[3:]))
+    def penalty(self, c):
+        relDist = self.intersect(self.targetMesh, Vector(c[:3]), Vector(c[3:]))
         if relDist > 0:
             return 0
         else:
             return self.initialVolume
 
-    # apply the cut after "slice_application_evaluations" evaluations
+    def is_feasible(self, fitness):
+        return fitness > 0 and fitness < self.initialVolume
+
+    # apply the cut after "slice_application_evaluations" evaluations (witout regeneration only)
     def custom_observer(self, population, num_generations, num_evaluations, args):
         if num_generations > 0 and num_generations % args["slice_application_generation"] == 0:
             final_pop_fitnesses = np.asarray([guy.fitness for guy in population])
@@ -197,7 +189,12 @@ class PlaneCutProblem(BlenderPlaneProblem):
             sort_indexes = sorted(range(len(final_pop_fitnesses)), key=final_pop_fitnesses.__getitem__)
             final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
             final_pop_candidates = final_pop_candidates[sort_indexes]
-            self.sliceAndApply(final_pop_candidates[-1])
 
-            self.bestCuts = np.append(self.bestCuts, np.array([final_pop_candidates[-1]]), axis=0)
-            self.bestFit.append(final_pop_fitnesses[-1])
+            bestCand = final_pop_candidates[-1]
+            bestFit = final_pop_fitnesses[-1]
+
+            if self.is_feasible(bestFit):
+                self.sliceAndApply(bestCand)
+                self.bestCuts = np.append(self.bestCuts, np.array([bestCand]), axis=0)
+                self.bestFit.append(bestFit)
+                print("\r --- Cut n. " + "{:.0}".format(num_generations / args["slice_application_generation"]), end='')

@@ -8,7 +8,7 @@ import os
 import plot_utils
 from inspyred_utils import NumpyRandomWrapper
 
-def getBestAndWorst(pop):
+def getBest(pop):
     final_pop_fitnesses = np.asarray([guy.fitness for guy in pop])
     final_pop_candidates = np.asarray([guy.candidate for guy in pop])
     
@@ -16,7 +16,7 @@ def getBestAndWorst(pop):
     final_pop_fitnesses = final_pop_fitnesses[sort_indexes]
     final_pop_candidates = final_pop_candidates[sort_indexes]
     
-    return final_pop_candidates[-1], final_pop_candidates[0]
+    return final_pop_candidates[-1], final_pop_fitnesses[-1]
 
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
@@ -30,18 +30,18 @@ args = {}
 args["initial_pop_storage"] = {}
 args["max_generations"] = 20
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
-args["pop_size"] = args["num_selected"] = 20 # population size
-args["num_offspring"] = 20
-args["num_evolutions"] = 1 # only if REGENERATION = True
+args["pop_size"] = args["num_selected"] = 40 # population size
+args["num_offspring"] = 40
+args["num_evolutions"] = 10 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
 
 args["num_elites"] = 1
-args["gaussian_stdev"] = 0.25
-args["custom_gaussian_stdev"] = [0.25,0.25,0.25, 10,10,10, 50]
-args["crossover_rate"] = 0.2
-args["mutation_rate"] = 0.8
+args["gaussian_stdev"] = 0.1
+args["custom_gaussian_stdev"] = [0.1,0.1,0.1,5,5,5,5]
+args["crossover_rate"] = 0.5
+args["mutation_rate"] = 1
 args["tournament_size"] = 3
 
 # --- Particle Swarm Optimization params ---
@@ -57,17 +57,17 @@ args["tau_prime"] = None
 args["epsilon"] = 0.00001
 
 if __name__ == "__main__":
-    rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
-    problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    # problem = BlenderWedgeProblem2('3D models/diamond.stl', '3D models/cylinder.stl', rng, fastBoolean=False)
+    rng = NumpyRandomWrapper(42)
+    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = BlenderWedgeProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
+    problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 
     if ALGORITHM == algorithms_list["ec"]:
         algorithm = ec.EvolutionaryComputation(rng)
         algorithm.replacer = ec.replacers.generational_replacement
         if isinstance(problem, BlenderWedgeProblem2):
             algorithm.variator = [ec.variators.uniform_crossover, problem.custom_gaussian_mutation]
-        else: 
+        else:
             algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
         algorithm.selector = ec.selectors.tournament_selection
 
@@ -94,9 +94,11 @@ if __name__ == "__main__":
         for i in range(args["num_evolutions"]):
             args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
             final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
-            b, w = getBestAndWorst(final_pop)
-            problem.sliceAndApply(b)
-            problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
+
+            b, f = getBest(final_pop)
+            if problem.is_feasible(f):
+                problem.sliceAndApply(b)
+                problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
             args["num_evolution"] += 1
             plt.close()
 
