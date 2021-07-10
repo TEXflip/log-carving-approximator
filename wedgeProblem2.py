@@ -40,7 +40,7 @@ class taglio:
         bpy.data.collections["Collection"].objects.link(wedge)
         
         wedge.scale = (self.scale, self.scale*5, self.scale)
-        wedge.rotation_euler = self.rotation
+        wedge.rotation_euler = self.vecRotation(Vector(self.rotation))
         wedge.location = self.origin
 
         return wedge
@@ -66,6 +66,18 @@ class taglio:
         meshToCarve.modifiers.remove(bool)
         
         return volume
+
+    # from normal to euler rotation coordinates
+    def vecRotation(self, v2):
+        # v1.normalize()
+        v1 = Vector((0,-1,0))
+        v2.normalize()
+        if v1 == -v2:
+            v1 = Vector((0,0,1))
+            return Quaternion((0, v1[0], v1[1], v1[2])).to_euler()
+        half = (v1+v2).normalized()
+        cross = v1.cross(half)
+        return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
 
 def is_inside(ray_origin, obj):
     ray_destination = Vector((1e10,0,0))
@@ -165,8 +177,8 @@ class BlenderWedgeProblem2:
         for v in self.targetMesh.data.vertices:
             origin = self.targetMesh.matrix_world @ v.co
             normal = -origin/np.linalg.norm(origin)
-            rotation = self.vecRotation(normal)
-            candidate = np.concatenate((origin, rotation, [180]), axis=0)
+            # rotation = self.vecRotation(normal)
+            candidate = np.concatenate((origin, normal, [180]), axis=0)
             self.cuts.append(candidate)
 
         self.random.shuffle(self.cuts)
@@ -278,15 +290,3 @@ class BlenderWedgeProblem2:
         bpy.ops.object.select_all(action='DESELECT')
         self.carvingMesh.select_set(True)
         bpy.ops.export_mesh.stl(filepath=filepath, use_selection=True)
-
-    # from normal to euler rotation coordinates
-    def vecRotation(self, v2):
-        # v1.normalize()
-        v1 = Vector((0,-1,0))
-        v2.normalize()
-        if v1 == -v2:
-            v1 = Vector((0,0,1))
-            return Quaternion((0, v1[0], v1[1], v1[2])).to_euler()
-        half = (v1+v2).normalized()
-        cross = v1.cross(half)
-        return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()

@@ -3,12 +3,11 @@ import sys
 from mathutils import Quaternion, Vector
 import math
 
-def vecRotation(v2):
-    # v1.normalize()
-    v1 = Vector((0,0,1))
+def vecRotation(v1, v2):
+    v1 = Vector(v1)
     v2.normalize()
     if v1 == -v2:
-        v1.orthogonal().normalize()
+        v1 = Vector((0,v1[2],-v1[1]))
         return Quaternion((0, v1[0], v1[1], v1[2])).to_euler()
     half = (v1+v2).normalized()
     cross = v1.cross(half)
@@ -34,7 +33,7 @@ def generateWedge(origin, rotation, angle):
     bpy.data.collections["Collection"].objects.link(wedge)
     
     wedge.scale = (scale, scale*5, scale)
-    wedge.rotation_euler = rotation
+    wedge.rotation_euler = vecRotation((0,-1,0),Vector(rotation))
     wedge.location = origin
 
     return wedge
@@ -55,7 +54,7 @@ if argv[2] == "plane":
         cuts.append([float(n) for n in c.split(',')])
 
     for c in cuts:
-        bpy.ops.mesh.primitive_plane_add(size=3, location=Vector(c[:3]), rotation=vecRotation(Vector(c[3:])))
+        bpy.ops.mesh.primitive_plane_add(size=3, location=Vector(c[:3]), rotation=vecRotation((0,0,1),Vector(c[3:])))
 
     for o in bpy.data.objects:
         if "Plane" in o.name:

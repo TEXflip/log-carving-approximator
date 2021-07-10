@@ -39,7 +39,7 @@ args["fig_title"] = 'Model Sculpting Approximation'
 
 args["num_elites"] = 1
 args["gaussian_stdev"] = 0.1
-args["custom_gaussian_stdev"] = [0.1,0.1,0.1,5,5,5,5]
+args["custom_gaussian_stdev"] = [0.1,0.1,0.1,0.1,0.1,0.1,20]
 args["crossover_rate"] = 0.5
 args["mutation_rate"] = 1
 args["tournament_size"] = 3
@@ -57,7 +57,7 @@ args["tau_prime"] = None
 args["epsilon"] = 0.00001
 
 if __name__ == "__main__":
-    rng = NumpyRandomWrapper(42)
+    rng = NumpyRandomWrapper(0)
     # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
     problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
