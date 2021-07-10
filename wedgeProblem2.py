@@ -173,7 +173,7 @@ class BlenderWedgeProblem2:
         # prepare a list of initial cuts for the generator
         self.cuts = []
         for v in self.targetMesh.data.vertices:
-            origin = (self.targetMesh.matrix_world @ v.co) * 1.1
+            origin = (self.targetMesh.matrix_world @ v.co) * 1.05
             normal = -origin/np.linalg.norm(origin)
             # rotation = self.vecRotation(normal)
             candidate = np.concatenate((origin, normal, [180]), axis=0)

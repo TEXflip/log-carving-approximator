@@ -64,10 +64,8 @@ class BlenderPlaneProblem:
         
         new_mesh = bpy.data.meshes.new('cube')
         new_mesh.from_pydata(vertices, edges, faces)
-        new_mesh.update()
         
         cube = bpy.data.objects.new('cube', new_mesh)
-        bpy.data.collections["Collection"].objects.link(cube)
         
         cube.scale = (self.scale, self.scale, self.scale)
         cube.rotation_euler = self.vecRotation(Vector(normal))
@@ -81,7 +79,7 @@ class BlenderPlaneProblem:
         bool.object = cube
         bool.operation = 'DIFFERENCE'
 
-        return bool
+        return bool, new_mesh
     
     # compute the minimum relative distance respect to the normal of the plane
     # and all the points of the mesh
@@ -98,20 +96,21 @@ class BlenderPlaneProblem:
     # Make a slice and compute the volume
     def sliceAndVolume(self, slice):
         # apply slice
-        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool, mesh = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         #compute volume
         volume = self.computeVolume(self.carvingMesh)
 
         # remove the copies
         self.carvingMesh.modifiers.remove(bool)
-        bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+        # bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
 
         return volume
 
     def sliceAndApply(self, slice):
         # apply slice
-        bool = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool,mesh = self.slice(self.carvingMesh, slice[:3], slice[3:])
 
         # apply boolean modifier
         bpy.context.view_layer.objects.active = self.carvingMesh
@@ -121,7 +120,8 @@ class BlenderPlaneProblem:
         volume = self.computeVolume(self.carvingMesh)
 
         # remove the empty
-        bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+        # bpy.data.objects.remove(bpy.data.objects["cube"], do_unlink=True)
 
         return volume
     
