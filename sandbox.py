@@ -50,7 +50,7 @@ if __name__ == "__main__":
     rng = NumpyRandomWrapper(42) # in sostanza, è una sorta di random.seed()
     # problem = PlaneCutProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    problem = BlenderWedgeProblem2('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
 
     pop = []
     for i in range(10):

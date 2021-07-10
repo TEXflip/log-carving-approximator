@@ -30,8 +30,8 @@ args = {}
 args["initial_pop_storage"] = {}
 args["max_generations"] = 20
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
-args["pop_size"] = args["num_selected"] = 40 # population size
-args["num_offspring"] = 40
+args["pop_size"] = args["num_selected"] = 100 # population size
+args["num_offspring"] = 100
 args["num_evolutions"] = 10 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
@@ -39,7 +39,7 @@ args["fig_title"] = 'Model Sculpting Approximation'
 
 args["num_elites"] = 1
 args["gaussian_stdev"] = 0.1
-args["custom_gaussian_stdev"] = [0.1,0.1,0.1,0.1,0.1,0.1,20]
+args["custom_gaussian_stdev"] = [0.1,0.1,0.1,0.1,0.1,0.1,5]
 args["crossover_rate"] = 0.5
 args["mutation_rate"] = 1
 args["tournament_size"] = 3
@@ -58,7 +58,7 @@ args["epsilon"] = 0.00001
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)
-    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = PlaneCutProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
     problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 

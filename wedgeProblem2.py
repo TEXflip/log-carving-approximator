@@ -6,6 +6,7 @@ import numpy as np
 import math
 from inspyred.ec import Bounder 
 import copy
+import time
 
 
 # script created by modifying "problem.py" with the text from "cut.py"
@@ -20,6 +21,8 @@ class taglio:
         self.toRad = math.pi/180
         self.scale = 15
         self.fastBoolean = fastBoolean
+        self.mesh = None
+        self.wedge = None
 
     def compute(self):
         angleRad = self.angle * self.toRad * 0.5
@@ -31,19 +34,19 @@ class taglio:
                     (0,0,1), (vx,vy,1), (0,v3y,1), (-vx,vy,1)]     # upper face vertices
         edges = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
         faces = [(3,2,1,0), (7,4,5,6), (3,0,4,7), (2,3,7,6), (1,2,6,5), (0,1,5,4)]
-        
-        new_mesh = bpy.data.meshes.new('wedge')
-        new_mesh.from_pydata(vertices, edges, faces)
-        new_mesh.update()
-        
-        wedge = bpy.data.objects.new('wedge', new_mesh)
-        bpy.data.collections["Collection"].objects.link(wedge)
-        
-        wedge.scale = (self.scale, self.scale*5, self.scale)
-        wedge.rotation_euler = self.vecRotation(Vector(self.rotation))
-        wedge.location = self.origin
 
-        return wedge
+        self.mesh = bpy.data.meshes.new('wedge')
+
+
+        self.mesh.from_pydata(vertices, edges, faces)
+        
+        self.wedge = bpy.data.objects.new('wedge', self.mesh)
+
+        self.wedge.scale = (self.scale, self.scale*5, self.scale)
+        self.wedge.rotation_euler = self.vecRotation(Vector(self.rotation))
+        self.wedge.location = self.origin
+
+        return self.wedge
 
     # returns the volume of meshToCarve after the intersection with the wedge
     def cutAndVolume(self, meshToCarve, wedge):
@@ -60,9 +63,8 @@ class taglio:
         bm.from_object(meshToCarve, bpy.context.evaluated_depsgraph_get())
 
         volume = bm.calc_volume()
-        
+
         bm.free()
-        
         meshToCarve.modifiers.remove(bool)
         
         return volume
@@ -79,12 +81,11 @@ class taglio:
         cross = v1.cross(half)
         return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
 
-def is_inside(ray_origin, obj):
+def is_inside(ray_origin, obj2_BVHtree):
     ray_destination = Vector((1e10,0,0))
-    mat = obj.matrix_local.inverted()
-    result, loc, normal, face_idx = obj.ray_cast(mat @ ray_origin, mat @ ray_destination)
+    loc, normal, face_idx, dist = obj2_BVHtree.ray_cast(ray_origin, ray_destination)
 
-    if face_idx == -1:
+    if face_idx == None:
         return False
     
     max_expected_intersections = 1000
@@ -94,12 +95,12 @@ def is_inside(ray_origin, obj):
     amount = fudge_distance / dir_len
     
     i = 1
-    while (face_idx != -1):
+    while (face_idx != None):
         
         loc = loc.lerp(direction, amount)    
-        result, loc, normal, face_idx = obj.ray_cast(mat @ ray_origin, mat @ ray_destination)
+        loc, normal, face_idx, dist = obj2_BVHtree.ray_cast(ray_origin, ray_destination)
 
-        if face_idx == -1:
+        if face_idx == None:
             break
         i += 1
         if i > max_expected_intersections:
@@ -115,13 +116,8 @@ def verifyIntersect(obj1, obj2):
     bm2 = bmesh.new()
 
     # fill bmesh data from objects
-    bpy.context.view_layer.objects.active = obj1
-    me = bpy.context.object.data
-    bm1.from_mesh(me)
-    
-    bpy.context.view_layer.objects.active = obj2
-    me = bpy.context.object.data
-    bm2.from_mesh(me)            
+    bm1.from_mesh(obj1.data)
+    bm2.from_mesh(obj2.data)            
     
     bm1.transform(obj1.matrix_world)
     bm2.transform(obj2.matrix_world) 
@@ -132,13 +128,15 @@ def verifyIntersect(obj1, obj2):
 
     # get intersecting pairs
     inter = obj1_BVHtree.overlap(obj2_BVHtree)
+    bm1.free()
+    bm2.free()
 
     # if list is empty, no objects are touching
     if inter != []:
         # print(str(obj1.name) + " and " + str(obj2.name) + " are touching!")
         return True
     else:
-        return is_inside(obj1.location, obj2)
+        return is_inside(obj1.location, obj2_BVHtree)
 
 
 class BlenderWedgeProblem2:
@@ -175,7 +173,7 @@ class BlenderWedgeProblem2:
         # prepare a list of initial cuts for the generator
         self.cuts = []
         for v in self.targetMesh.data.vertices:
-            origin = self.targetMesh.matrix_world @ v.co
+            origin = (self.targetMesh.matrix_world @ v.co) * 1.1
             normal = -origin/np.linalg.norm(origin)
             # rotation = self.vecRotation(normal)
             candidate = np.concatenate((origin, normal, [180]), axis=0)
@@ -198,10 +196,12 @@ class BlenderWedgeProblem2:
     # for every candidate, check the fitness
     # the fitness is the quantity of removed volume
     def evaluator(self, candidates, args):
-
+        times = []
+        
         fitness = []
         for i,c in enumerate(candidates):
             t = taglio(c[0:3], c[3:6], c[6], self.fastBoolean)
+
             wedge = t.compute()
 
             volume = t.cutAndVolume(self.carvingMesh, wedge)
@@ -213,11 +213,10 @@ class BlenderWedgeProblem2:
             if verifyIntersect(self.targetMesh, wedge):
                 # candidateFitness -= penaltyFactor * abs(volumeTargetMesh - t.computeVolume(self.targetMesh, _cylinder, _empty))
                 candidateFitness -= self.initialVolume
-
             fitness.append(candidateFitness)
 
-            bpy.data.objects.remove(wedge, do_unlink=True)
-
+            bpy.data.meshes.remove(t.mesh)
+        
         return fitness
 
     def computeVolume(self, obj):
