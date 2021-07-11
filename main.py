@@ -6,6 +6,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import os
 import plot_utils
+from es import ES, GLOBAL, INDIVIDUAL
 from inspyred_utils import NumpyRandomWrapper
 
 def getBest(pop):
@@ -20,7 +21,7 @@ def getBest(pop):
 
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
-ALGORITHM = algorithms_list["ec"]
+ALGORITHM = algorithms_list["es"]
 REGENERATION = True
 
 args = {}
@@ -28,10 +29,10 @@ args = {}
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 20
+args["max_generations"] = 100
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
-args["pop_size"] = args["num_selected"] = 100 # population size
-args["num_offspring"] = 100
+args["pop_size"] = args["num_selected"] = 10 # population size
+args["num_offspring"] = 10
 args["num_evolutions"] = 10 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
@@ -54,11 +55,16 @@ args["social_rate"] = 2.
 
 args["tau"] = None
 args["tau_prime"] = None
-args["epsilon"] = 0.00001
+args["epsilon"] = 0.000001
+args["mixing_number"] = 3
+args["sigma"] = 0.2
+# args["strategy_mode"] = None
+# args["strategy_mode"] = GLOBAL
+args["strategy_mode"] = INDIVIDUAL
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)
-    # problem = PlaneCutProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
+    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
     problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 
@@ -70,12 +76,14 @@ if __name__ == "__main__":
         else:
             algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
         algorithm.selector = ec.selectors.tournament_selection
+        # algorithm.selector = ec.selectors.uniform_selection
+        # algorithm.selector = ec.selectors.truncation_selection
 
     elif ALGORITHM == algorithms_list["pso"]:
         algorithm = swarm.PSO(rng)
 
-    # elif ALGORITHM == algorithms_list["es"]:
-    #     algorithm = ec.ES(rng)
+    elif ALGORITHM == algorithms_list["es"]:
+        algorithm = ES(rng)
 
     algorithm.terminator = ec.terminators.generation_termination
     algorithm.observer = [plot_utils.plot_observer, plot_utils.initial_pop_observer]
@@ -88,22 +96,23 @@ if __name__ == "__main__":
     evaluator = problem.evaluator
 
     if not REGENERATION:
-        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, bounder=problem.bounder, **args)
+        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, 
+                                    bounder=problem.bounder, num_vars=problem.num_vars, **args)
     else:
         args["num_evolution"] = 0
         for i in range(args["num_evolutions"]):
             args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
-            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, num_vars=problem.num_vars, **args)
 
             b, f = getBest(final_pop)
+            # for i, c in enumerate(final_pop):
+            #     print(str(i)+') ', c)
             if problem.is_feasible(f):
-                problem.sliceAndApply(b)
-                problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
+                problem.sliceAndApply(b[:problem.num_vars])
+                problem.bestCuts = np.append(problem.bestCuts, np.array([b[:problem.num_vars]]), axis=0)
             args["num_evolution"] += 1
             plt.close()
 
-    for i, c in enumerate(final_pop):
-        print(str(i)+') ', c)
     print("selected cuts: ", problem.bestCuts)
 
 

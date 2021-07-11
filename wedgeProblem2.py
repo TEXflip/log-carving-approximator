@@ -166,6 +166,7 @@ class BlenderWedgeProblem2:
         self.targetVolume = self.computeVolume(self.targetMesh)
         self.initialVolume = self.computeVolume(self.carvingMesh)
         self.maximize = True
+        self.num_vars = 7
 
         self.bestCuts = np.empty((0,7), np.float32)
         self.bestFit = []

@@ -2,6 +2,7 @@ from inspyred import ec, swarm
 import numpy as np
 import json
 from inspyred_utils import NumpyRandomWrapper
+from es import ES, GLOBAL, INDIVIDUAL
 import sys
 
 def getBest(pop):
@@ -37,8 +38,8 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
     elif algorithm == "pso":
         algorithm = swarm.PSO(rng)
 
-    # elif algorithm == "es":
-    #     algorithm = ec.ES(rng)
+    elif algorithm == "es":
+        algorithm = ES(rng)
 
     algorithm.terminator = ec.terminators.generation_termination
     
@@ -59,8 +60,8 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
             final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
             b, f = getBest(final_pop)
             if problem.is_feasible(f):
-                problem.sliceAndApply(b)
-                problem.bestCuts = np.append(problem.bestCuts, np.array([b]), axis=0)
+                problem.sliceAndApply(b[:problem.num_vars])
+                problem.bestCuts = np.append(problem.bestCuts, np.array([b[:problem.num_vars]]), axis=0)
                 problem.bestFit.append(f)
             args["num_evolution"] += 1
     print()

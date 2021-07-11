@@ -44,7 +44,7 @@ def plot_observer(population, num_generations, num_evaluations, args):
     plt.xlim((0, num_evaluations))
     plt.ylim((ymin - 0.1*yrange, ymax + 0.1*yrange))
     plt.draw()
-    plt.pause(0.001)
+    plt.pause(0.0001)
     plt.legend()
     plt.show()
 

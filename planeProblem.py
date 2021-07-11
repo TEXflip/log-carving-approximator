@@ -40,7 +40,7 @@ class BlenderPlaneProblem:
         volume = bm.calc_volume()
 
         bm.free()
-        return volume # * 1000
+        return volume
 
     # from normal to euler rotation coordinates
     def vecRotation(self, v2):
@@ -96,7 +96,7 @@ class BlenderPlaneProblem:
     # Make a slice and compute the volume
     def sliceAndVolume(self, slice):
         # apply slice
-        bool, mesh = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool, mesh = self.slice(self.carvingMesh, slice[0:3], slice[3:6])
 
         #compute volume
         volume = self.computeVolume(self.carvingMesh)
@@ -110,7 +110,7 @@ class BlenderPlaneProblem:
 
     def sliceAndApply(self, slice):
         # apply slice
-        bool,mesh = self.slice(self.carvingMesh, slice[:3], slice[3:])
+        bool,mesh = self.slice(self.carvingMesh, slice[0:3], slice[3:6])
 
         # apply boolean modifier
         bpy.context.view_layer.objects.active = self.carvingMesh
@@ -139,6 +139,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
         self.initialVolume = self.computeVolume(self.carvingMesh)
         print("carving Mesh initial Volume: ", self.initialVolume)
         self.maximize = True
+        self.num_vars = 6
         self.bounder = Bounder([-2,-2,-2,-1,-1,-1], [2,2,2,1,1,1])
         self.bestCuts = np.empty((0,6), np.float32)
         self.bestFit = []
@@ -146,7 +147,7 @@ class PlaneCutProblem(BlenderPlaneProblem):
         # prepare a list of initial cuts for the generator
         self.cuts = []
         for v in self.targetMesh.data.vertices:
-            origin = self.targetMesh.matrix_world @ v.co
+            origin = (self.targetMesh.matrix_world @ v.co)*1.1
             normal = -origin/np.linalg.norm(origin)
             candidate = np.concatenate((origin, normal), axis=0)
             self.cuts.append(candidate)
