@@ -59,14 +59,14 @@ args["epsilon"] = 0.000001
 args["mixing_number"] = 3
 args["sigma"] = 0.2
 # args["strategy_mode"] = None
-# args["strategy_mode"] = GLOBAL
-args["strategy_mode"] = INDIVIDUAL
+args["strategy_mode"] = GLOBAL
+# args["strategy_mode"] = INDIVIDUAL
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)
-    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
     # problem = BlenderWedgeProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
-    problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
+    # problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 
     if ALGORITHM == algorithms_list["ec"]:
         algorithm = ec.EvolutionaryComputation(rng)
@@ -102,7 +102,8 @@ if __name__ == "__main__":
         args["num_evolution"] = 0
         for i in range(args["num_evolutions"]):
             args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
-            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, num_vars=problem.num_vars, **args)
+            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize,
+                                        bounder=problem.bounder,  num_vars=problem.num_vars, **args)
 
             b, f = getBest(final_pop)
             # for i, c in enumerate(final_pop):

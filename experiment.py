@@ -2,6 +2,8 @@ from inspyred import ec, swarm
 import numpy as np
 import json
 from inspyred_utils import NumpyRandomWrapper
+from planeProblem import PlaneCutProblem
+from wedgeProblem2 import BlenderWedgeProblem2
 from es import ES, GLOBAL, INDIVIDUAL
 import sys
 
@@ -16,8 +18,6 @@ def getBest(pop):
     return final_pop_candidates[-1], final_pop_fitnesses[-1]
 
 def runExperiment(problemType, target, carving, algorithm, regeneration, seed, **args):
-    from planeProblem import PlaneCutProblem
-    from wedgeProblem2 import BlenderWedgeProblem2
     rng = NumpyRandomWrapper(seed)
 
     if problemType == "plane":
@@ -39,6 +39,9 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
         algorithm = swarm.PSO(rng)
 
     elif algorithm == "es":
+        args["tau"] = args["tau"] if args["tau"]!=-1 else None
+        args["tau_prime"] = args["tau_prime"] if args["tau_prime"]!=-1 else None
+        args["strategy_mode"] = GLOBAL if args["strategy_mode"] == 'global' else INDIVIDUAL if args["strategy_mode"] == 'individual' else None
         algorithm = ES(rng)
 
     algorithm.terminator = ec.terminators.generation_termination
@@ -51,13 +54,15 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
     evaluator = problem.evaluator
 
     if not regeneration:
-        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, bounder=problem.bounder, **args)
+        final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, 
+                                    bounder=problem.bounder, num_vars=problem.num_vars, **args)
     else:
         args["num_evolution"] = 0
         for i in range(args["num_evolutions"]):
-            args["fig_title"] = "Evolution n. " + str(args["num_evolution"]+1)
+            args["fig_title"] = "Evolution n. " + str(args["num_evolution"])
             print("\r --- Evolution n. " + str(args["num_evolution"]), end='')
-            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, **args)
+            final_pop = algorithm.evolve(generator, evaluator, maximize=problem.maximize, 
+                                        bounder=problem.bounder, num_vars=problem.num_vars, **args)
             b, f = getBest(final_pop)
             if problem.is_feasible(f):
                 problem.sliceAndApply(b[:problem.num_vars])
