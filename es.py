@@ -62,7 +62,7 @@ class ES(EvolutionaryComputation):
         
     def _internal_variation(self, random, candidates, args):        
         tau = args.setdefault('tau', None)
-        tau_i = args.setdefault('tau', None)
+        tau_i = args.setdefault('tau_i', None)
         epsilon = args.setdefault('epsilon', 0.00001)
         
         # num_offspring (\\lambda)

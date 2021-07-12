@@ -54,10 +54,10 @@ args["social_rate"] = 2.
 # --- Evolutionary Strategies params ---
 
 args["tau"] = None
-args["tau_prime"] = None
+args["tau_i"] = None
 args["epsilon"] = 0.000001
 args["mixing_number"] = 3
-args["sigma"] = 0.2
+args["sigma"] = 10 # static mutation only (strategy_mode=None)
 # args["strategy_mode"] = None
 args["strategy_mode"] = GLOBAL
 # args["strategy_mode"] = INDIVIDUAL

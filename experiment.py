@@ -4,7 +4,7 @@ import json
 from inspyred_utils import NumpyRandomWrapper
 from planeProblem import PlaneCutProblem
 from wedgeProblem2 import BlenderWedgeProblem2
-from es import ES, GLOBAL, INDIVIDUAL
+from es import ES, GLOBAL, INDIVIDUAL, CORRELATED
 import sys
 
 def getBest(pop):
@@ -40,8 +40,8 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
 
     elif algorithm == "es":
         args["tau"] = args["tau"] if args["tau"]!=-1 else None
-        args["tau_prime"] = args["tau_prime"] if args["tau_prime"]!=-1 else None
-        args["strategy_mode"] = GLOBAL if args["strategy_mode"] == 'global' else INDIVIDUAL if args["strategy_mode"] == 'individual' else None
+        args["tau_i"] = args["tau_i"] if args["tau_i"]!=-1 else None
+        args["strategy_mode"] = GLOBAL if args["strategy_mode"] == 'global' else INDIVIDUAL if args["strategy_mode"] == 'individual' else CORRELATED if args["strategy_mode"] == 'correlated' else None
         algorithm = ES(rng)
 
     algorithm.terminator = ec.terminators.generation_termination
