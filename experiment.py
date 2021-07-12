@@ -24,7 +24,6 @@ def runExperiment(problemType, target, carving, algorithm, regeneration, seed, *
         problem = PlaneCutProblem(target, carving, rng)
     else:
         problem = BlenderWedgeProblem2(target, carving, rng, fastBoolean=False)
-    # problem = BlenderWedgeProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
 
     if algorithm == "ec":
         algorithm = ec.EvolutionaryComputation(rng)

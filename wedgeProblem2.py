@@ -19,19 +19,19 @@ class taglio:
         self.rotation = rotation
         self.angle = angle
         self.toRad = math.pi/180
-        self.scale = 15
+        self.scale = 30
         self.fastBoolean = fastBoolean
         self.mesh = None
         self.wedge = None
 
     def compute(self):
-        angleRad = self.angle * self.toRad * 0.5
+        angleRad = self.angle * 0.5
         vx = math.sin(angleRad)
         vy = math.cos(angleRad)
-        v3y = 1 if self.angle > 90 else vy
+        v3y = 1 if self.angle > (math.pi/2) else vy
         
-        vertices = [(0,0,-1), (vx,vy,-1), (0,v3y,-1), (-vx,vy,-1),  # lower face vertices
-                    (0,0,1), (vx,vy,1), (0,v3y,1), (-vx,vy,1)]     # upper face vertices
+        vertices = [(0,0,-0.5), (vx,vy,-0.5), (0,v3y,-0.5), (-vx,vy,-0.5),  # lower face vertices
+                    (0,0,0.5), (vx,vy,0.5), (0,v3y,0.5), (-vx,vy,0.5)]     # upper face vertices
         edges = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
         faces = [(3,2,1,0), (7,4,5,6), (3,0,4,7), (2,3,7,6), (1,2,6,5), (0,1,5,4)]
 
@@ -42,7 +42,7 @@ class taglio:
         
         self.wedge = bpy.data.objects.new('wedge', self.mesh)
 
-        self.wedge.scale = (self.scale, self.scale*5, self.scale)
+        self.wedge.scale = (self.scale, self.scale, self.scale)
         self.wedge.rotation_euler = self.vecRotation(Vector(self.rotation))
         self.wedge.location = self.origin
 
@@ -145,7 +145,7 @@ class BlenderWedgeProblem2:
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
         self.fastBoolean = fastBoolean
-        self.bounder = Bounder([-2,-2,-2,-90,-90,-90, 5], [2,2,2,90,90,90, 180])
+        self.bounder = Bounder([-2,-2,-2,-90,-90,-90, 0.0872665], [2,2,2,90,90,90, math.pi/2])
 
         # reset the workspace
         objects = bpy.data.objects
@@ -177,7 +177,7 @@ class BlenderWedgeProblem2:
             origin = (self.targetMesh.matrix_world @ v.co) * 1.05
             normal = -origin/np.linalg.norm(origin)
             # rotation = self.vecRotation(normal)
-            candidate = np.concatenate((origin, normal, [180]), axis=0)
+            candidate = np.concatenate((origin, normal, [math.pi]), axis=0)
             self.cuts.append(candidate)
 
         self.random.shuffle(self.cuts)

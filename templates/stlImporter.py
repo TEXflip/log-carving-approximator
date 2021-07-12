@@ -14,14 +14,14 @@ def vecRotation(v1, v2):
     return Quaternion((v1.dot(half), cross[0], cross[1], cross[2])).to_euler()
 
 def generateWedge(origin, rotation, angle):
-    scale = 15
-    angleRad = angle * (math.pi/180) * 0.5
+    scale = 30
+    angleRad = angle * 0.5
     vx = math.sin(angleRad)
     vy = math.cos(angleRad)
-    v3y = 1 if angle > 90 else vy
+    v3y = 1 if angle > (math.pi/2) else vy
     
-    vertices = [(0,0,-1), (vx,vy,-1), (0,v3y,-1), (-vx,vy,-1),  # lower face vertices
-                (0,0,1), (vx,vy,1), (0,v3y,1), (-vx,vy,1)]     # upper face vertices
+    vertices = [(0,0,-0.5), (vx,vy,-0.5), (0,v3y,-0.5), (-vx,vy,-0.5),  # lower face vertices
+                (0,0,0.5), (vx,vy,0.5), (0,v3y,0.5), (-vx,vy,0.5)]     # upper face vertices
     edges = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
     faces = [(3,2,1,0), (7,4,5,6), (3,0,4,7), (2,3,7,6), (1,2,6,5), (0,1,5,4)]
     
@@ -32,7 +32,7 @@ def generateWedge(origin, rotation, angle):
     wedge = bpy.data.objects.new('wedge', new_mesh)
     bpy.data.collections["Collection"].objects.link(wedge)
     
-    wedge.scale = (scale, scale*5, scale)
+    wedge.scale = (scale, scale, scale)
     wedge.rotation_euler = vecRotation((0,-1,0),Vector(rotation))
     wedge.location = origin
 
