@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import os
 import plot_utils
-from es import ES, GLOBAL, INDIVIDUAL
+from es import CORRELATED, ES, GLOBAL, INDIVIDUAL
 from inspyred_utils import NumpyRandomWrapper
 
 def getBest(pop):
@@ -21,7 +21,7 @@ def getBest(pop):
 
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
-ALGORITHM = algorithms_list["ec"]
+ALGORITHM = algorithms_list["es"]
 REGENERATION = True
 
 args = {}
@@ -29,21 +29,22 @@ args = {}
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 100
+args["max_generations"] = 50
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
-args["pop_size"] = args["num_selected"] = 10 # population size
-args["num_offspring"] = 10
-args["num_evolutions"] = 1 # only if REGENERATION = True
+args["pop_size"] = args["num_selected"] = 20 # population size
+args["num_offspring"] = 20
+args["num_evolutions"] = 10 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
 
 args["num_elites"] = 1
 args["gaussian_stdev"] = 0.1
-args["custom_gaussian_stdev"] = [0.1,0.1,0.1,0.1,0.1,0.1,3.1415926535/8]
-args["crossover_rate"] = 0.5
-args["mutation_rate"] = 1
+args["crossover_rate"] = 0.2
+args["mutation_rate"] = 0.5
 args["tournament_size"] = 3
+args["custom_gaussian_stdev"] = [0.2,0.2,0.2,0.1,0.1,0.1,3.1415926535/16]
+args["custom_mutation_rate"] = [0.9,0.9,0.9,0.9,0.9,0.9,0.0]
 
 # --- Particle Swarm Optimization params ---
 
@@ -56,11 +57,12 @@ args["social_rate"] = 2.
 args["tau"] = None
 args["tau_i"] = None
 args["epsilon"] = 0.000001
-args["mixing_number"] = 3
+args["mixing_number"] = 5
 args["sigma"] = 10 # static mutation only (strategy_mode=None)
 # args["strategy_mode"] = None
-args["strategy_mode"] = GLOBAL
+# args["strategy_mode"] = GLOBAL
 # args["strategy_mode"] = INDIVIDUAL
+args["strategy_mode"] = CORRELATED
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)

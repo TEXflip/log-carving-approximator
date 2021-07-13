@@ -145,7 +145,7 @@ class BlenderWedgeProblem2:
         self.targetMeshPath = targetMeshPath
         self.carvingMeshPath = carvingMeshPath
         self.fastBoolean = fastBoolean
-        self.bounder = Bounder([-2,-2,-2,-90,-90,-90, 0.0872665], [2,2,2,90,90,90, math.pi/2])
+        self.bounder = Bounder([-2,-2,-2,-90,-90,-90, 0.0872665], [2,2,2,90,90,90, math.pi])
 
         # reset the workspace
         objects = bpy.data.objects
@@ -254,12 +254,12 @@ class BlenderWedgeProblem2:
 
     def custom_gaussian_mutation(self, random, candidates, args):
         def mutate(random, candidate, args):
-            mut_rate = args.setdefault('mutation_rate', 1.0)
+            mut_rate = args.setdefault('custom_mutation_rate', [0.8,0.8,0.8,0.5,0.5,0.5, 0.1])
             mean = args.setdefault('gaussian_mean', 0.0)
             stdev = args.setdefault('custom_gaussian_stdev', [0.25,0.25,0.25,10,10,10,10])
             mutant = copy.copy(candidate)
             for i, m in enumerate(mutant):
-                if random.random() < mut_rate:
+                if random.random() < mut_rate[i]:
                     mutant[i] += random.gauss(mean, stdev[i])
             mutant = self.bounder(mutant, args)
             return mutant

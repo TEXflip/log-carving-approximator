@@ -150,8 +150,7 @@ class ES(EvolutionaryComputation):
                             cand[i] = c + random.gauss(0, s)
                 else :
                     # build correlation matrix
-                    T = np.reduce(np.dot, 
-                           [np.reduce(np.dot,
+                    T = functools.reduce(np.dot, [functools.reduce(np.dot,
                                   [self.elementary_rotation(p,q,alphas)
                                    for q in range(p+1, self.num_vars)]) 
                             for p in range(self.num_vars - 1)])
@@ -204,8 +203,7 @@ class ES(EvolutionaryComputation):
                     # since have python random, do it like this... would be 
                     # better with numpy
                     alphas = [random.uniform(-np.pi, np.pi) 
-                              for _ in range((self.num_vars**2 - 
-                                              self.num_vars)/2)]
+                              for _ in range(int((self.num_vars**2 - self.num_vars)/2))]
                     return np.concatenate( (candidate, alphas, sigmas) ) 
             
         return strategy_generator
