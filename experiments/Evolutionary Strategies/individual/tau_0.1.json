@@ -17,6 +17,6 @@
         "epsilon": 0.000001,
         "mixing_number": 3,
         "sigma": 0.1,
-        "strategy_mode": "individual"
+        "strategy_mode": "global"
     }
 }
