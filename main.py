@@ -21,7 +21,7 @@ def getBest(pop):
 
 ### Choose the algorithm between EC and PSO
 algorithms_list = {"ec" : 0, "pso" : 1, "es" : 2}
-ALGORITHM = algorithms_list["es"]
+ALGORITHM = algorithms_list["ec"]
 REGENERATION = True
 
 args = {}
@@ -40,8 +40,8 @@ args["fig_title"] = 'Model Sculpting Approximation'
 
 args["num_elites"] = 1
 args["gaussian_stdev"] = 0.1
-args["crossover_rate"] = 0.2
-args["mutation_rate"] = 0.5
+args["crossover_rate"] = 0.5
+args["mutation_rate"] = 1
 args["tournament_size"] = 3
 args["custom_gaussian_stdev"] = [0.2,0.2,0.2,0.1,0.1,0.1,3.1415926535/16]
 args["custom_mutation_rate"] = [0.9,0.9,0.9,0.9,0.9,0.9,0.0]
@@ -66,8 +66,8 @@ args["strategy_mode"] = CORRELATED
 
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)
-    # problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
-    problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
+    problem = PlaneCutProblem('3D models/diamond.stl', '3D models/cylinder.stl', rng)
+    # problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 
     if ALGORITHM == algorithms_list["ec"]:
         algorithm = ec.EvolutionaryComputation(rng)

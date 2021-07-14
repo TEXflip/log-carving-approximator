@@ -75,7 +75,7 @@ def runMultiExperiments(file_params):
     in_f = open(file_params)
     p = json.load(in_f)
     in_f.close()
-
+    print("\n ------ ", file_params, " ------ \n")
     experiments = []
     for i in range(p["runs"]):
         print("\n --- Experiment ", i+1, " --- \n")
