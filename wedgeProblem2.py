@@ -245,9 +245,9 @@ class BlenderWedgeProblem2:
 
         bpy.context.view_layer.objects.active = self.carvingMesh
         bool = self.carvingMesh.modifiers.new(type="BOOLEAN", name="bool")
-        if self.fastBoolean:
-            bool.solver = 'FAST'
-            bool.double_threshold = fastModifierThreshold
+        # if self.fastBoolean:
+        #     bool.solver = 'FAST'
+        #     bool.double_threshold = fastModifierThreshold
         bool.object = wedge
         bool.operation = 'DIFFERENCE'
         bpy.ops.object.modifier_apply(modifier=bool.name)

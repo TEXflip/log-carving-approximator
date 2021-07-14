@@ -1,0 +1,22 @@
+{
+    "runs": 10,
+    "problemType": "wedge",
+    "carvingMeshFilepath": "3D models/cylinder.stl",
+    "targetMeshFilepath": "3D models/bulbasaur.stl",
+    "algorithm": "es",
+    "regeneration": true,
+    "seeds": [0,1,2,3,4,5,6,7,8,9],
+    "args":{
+        "max_generations": 20,
+        "num_selected": 10,
+        "pop_size": 10,
+        "num_offspring": 10,
+        "num_evolutions": 10,
+        "tau": 0.5,
+        "tau_i": -1,
+        "epsilon": 0.000001,
+        "mixing_number": 3,
+        "sigma": 0.1,
+        "strategy_mode": "correlated"
+    }
+}
