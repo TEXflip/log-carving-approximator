@@ -2,6 +2,7 @@ from inspyred import ec, swarm
 from planeProblem import PlaneCutProblem
 from wedgeProblem import BlenderWedgeProblem, taglio
 from wedgeProblem2 import BlenderWedgeProblem2
+from sphereProblem import BlenderSphereProblem
 import matplotlib.pylab as plt
 import numpy as np
 import os
@@ -29,22 +30,23 @@ args = {}
 # --- Global Params
 
 args["initial_pop_storage"] = {}
-args["max_generations"] = 50
+args["max_generations"] = 20
 args["slice_application_generation"] = 20 # number of generations before appling the best slice, only if REGENERATION = False
 args["pop_size"] = args["num_selected"] = 20 # population size
 args["num_offspring"] = 20
-args["num_evolutions"] = 10 # only if REGENERATION = True
+args["num_evolutions"] = 30 # only if REGENERATION = True
 args["fig_title"] = 'Model Sculpting Approximation'
 
 # --- Evolutionary Computation params ---
 
 args["num_elites"] = 1
-args["gaussian_stdev"] = 0.2
+args["gaussian_stdev"] = 1.
 args["crossover_rate"] = 0.5
 args["mutation_rate"] = 0.8
 args["tournament_size"] = 3
 args["custom_gaussian_stdev"] = [0.2,0.2,0.2,0.1,0.1,0.1,3.1415926535/16]
-args["custom_mutation_rate"] = [0.9,0.9,0.9,0.9,0.9,0.9,0.5]
+# args["custom_mutation_rate"] = [0.9,0.9,0.9,0.9,0.9,0.9,0.5] # only wedge problem
+args["custom_mutation_rate"] = [0.2,0.2,0.2,2] # only sphere problem
 
 # --- Particle Swarm Optimization params ---
 
@@ -67,12 +69,13 @@ args["strategy_mode"] = CORRELATED
 if __name__ == "__main__":
     rng = NumpyRandomWrapper(0)
     # problem = PlaneCutProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng)
-    problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
+    # problem = BlenderWedgeProblem2('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
+    problem = BlenderSphereProblem('3D models/bulbasaur.stl', '3D models/cylinder.stl', rng, fastBoolean=True)
 
     if ALGORITHM == algorithms_list["ec"]:
         algorithm = ec.EvolutionaryComputation(rng)
         algorithm.replacer = ec.replacers.generational_replacement
-        if isinstance(problem, BlenderWedgeProblem2):
+        if isinstance(problem, BlenderWedgeProblem2) or isinstance(problem, BlenderSphereProblem):
             algorithm.variator = [ec.variators.uniform_crossover, problem.custom_gaussian_mutation]
         else:
             algorithm.variator = [ec.variators.uniform_crossover, ec.variators.gaussian_mutation] # no need to do custom mutator or crossover
@@ -127,7 +130,11 @@ if __name__ == "__main__":
         problem.SaveCarvingMesh("finalModel.stl")
         command = 'blender -P templates/stlImporter.py -- "finalModel.stl" "' + problem.targetMeshPath + '" plane ' + cuts_string
         os.system(command)
+    elif isinstance(problem, BlenderWedgeProblem2):
+        problem.SaveCarvingMesh("finalModel2.stl", problem.carvingMesh)
+        command = 'blender -P templates/stlImporter.py -- "finalModel2.stl" "' + problem.targetMeshPath + '" wedge ' + cuts_string
+        os.system(command)
     else:
         problem.SaveCarvingMesh("finalModel3.stl", problem.carvingMesh)
-        command = 'blender -P templates/stlImporter.py -- "finalModel3.stl" "' + problem.targetMeshPath + '" wedge ' + cuts_string
+        command = 'blender -P templates/stlImporter.py -- "finalModel3.stl" "' + problem.targetMeshPath + '" sphere ' + cuts_string
         os.system(command)

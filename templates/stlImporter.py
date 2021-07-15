@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 import sys
 from mathutils import Quaternion, Vector
 import math
@@ -38,6 +39,19 @@ def generateWedge(origin, rotation, angle):
 
     return wedge
 
+def generateSphere(origin, radius):
+    mesh = bpy.data.meshes.new("sphere")
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=3, diameter=radius)
+    bm.to_mesh(mesh)
+    
+    sphere = bpy.data.objects.new('sphere', mesh)
+    bpy.data.collections["Collection"].objects.link(sphere)
+    
+    sphere.location = origin
+
+    return sphere
+
 argv = sys.argv
 argv = argv[argv.index("--") + 1:]
 
@@ -59,7 +73,7 @@ if argv[2] == "plane":
     for o in bpy.data.objects:
         if "Plane" in o.name:
             o.display_type = "WIRE"
-else:
+elif argv[2] == "wedge":
     cuts = []
     for c in argv[3].split(';'):
         cuts.append([float(n) for n in c.split(',')])
@@ -69,4 +83,15 @@ else:
 
     for o in bpy.data.objects:
         if "wedge" in o.name:
+            o.display_type = "WIRE"
+else:
+    cuts = []
+    for c in argv[3].split(';'):
+        cuts.append([float(n) for n in c.split(',')])
+
+    for c in cuts:
+        generateSphere(c[0:3], c[3])
+
+    for o in bpy.data.objects:
+        if "sphere" in o.name:
             o.display_type = "WIRE"
